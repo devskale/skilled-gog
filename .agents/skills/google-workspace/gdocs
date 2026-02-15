@@ -1,0 +1,141 @@
+#!/bin/bash
+# Google Docs Editor - Direct API editing
+# Edit Google Docs directly without intermediate formats
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+command="$1"
+shift || true
+
+case "$command" in
+    ""|"help"|"-h"|"--help")
+        echo "Google Docs API Editor - Edit Google Docs directly"
+        echo ""
+        echo "Usage: gdocs <command> <doc_id> [args...]"
+        echo ""
+        echo "Commands:"
+        echo "  structure              - Show document structure"
+        echo "  append <text>         - Append text to document"
+        echo "  insert <after> <text> - Insert text after specified text"
+        echo "  replace <old> <new>   - Replace text"
+        echo "  paragraph <text>      - Add new paragraph"
+        echo "  bold <text>           - Make text bold"
+        echo "  open                  - Open document in browser"
+        echo ""
+        echo "Examples:"
+        echo "  # Show document structure"
+        echo "  gdocs structure 1kJG9gFMy4M2iHfdxOhQ_KfNh1oy1P4aOdsDB-9626eg"
+        echo ""
+        echo "  # Append text"
+        echo "  gdocs append <doc_id> \"New paragraph at the end\""
+        echo ""
+        echo "  # Insert after specific text"
+        echo "  gdocs insert <doc_id> \"Section Header\" \"This comes after the header\""
+        echo ""
+        echo "  # Replace text"
+        echo "  gdocs replace <doc_id> \"old value\" \"new value\""
+        echo ""
+        echo "  # Make text bold"
+        echo "  gdocs bold <doc_id> \"Important heading\""
+        echo ""
+        echo "  # Open in browser"
+        echo "  gdocs open <doc_id>"
+        echo ""
+        echo "Finding Document ID:"
+        echo "  Open document in browser - URL is:"
+        echo "  https://docs.google.com/document/d/<DOC_ID>/edit"
+        echo "  Copy the <DOC_ID> part."
+        ;;
+
+    structure)
+        if [ -z "$1" ]; then
+            echo "❌ Error: structure command requires doc_id"
+            echo "  Usage: gdocs structure <doc_id>"
+            exit 1
+        fi
+        DOC_ID="$1"
+        echo "📄 Document Structure:"
+        cd "$SCRIPT_DIR" && uv run gdocs_edit.py structure "$DOC_ID"
+        ;;
+
+    append)
+        if [ -z "$1" ] || [ -z "$2" ]; then
+            echo "❌ Error: append command requires doc_id and text"
+            echo "  Usage: gdocs append <doc_id> <text>"
+            exit 1
+        fi
+        DOC_ID="$1"
+        shift
+        echo "📝 Appending to document..."
+        cd "$SCRIPT_DIR" && uv run gdocs_edit.py append "$DOC_ID" "$*"
+        ;;
+
+    insert)
+        if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
+            echo "❌ Error: insert command requires doc_id, after_text, and new_text"
+            echo "  Usage: gdocs insert <doc_id> <after_text> <new_text>"
+            exit 1
+        fi
+        DOC_ID="$1"
+        AFTER="$2"
+        shift 2
+        echo "📝 Inserting text..."
+        cd "$SCRIPT_DIR" && uv run gdocs_edit.py insert "$DOC_ID" "$AFTER" "$*"
+        ;;
+
+    replace)
+        if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
+            echo "❌ Error: replace command requires doc_id, old_text, and new_text"
+            echo "  Usage: gdocs replace <doc_id> <old_text> <new_text>"
+            exit 1
+        fi
+        DOC_ID="$1"
+        OLD="$2"
+        shift 2
+        echo "📝 Replacing text..."
+        cd "$SCRIPT_DIR" && uv run gdocs_edit.py replace "$DOC_ID" "$OLD" "$*"
+        ;;
+
+    paragraph)
+        if [ -z "$1" ] || [ -z "$2" ]; then
+            echo "❌ Error: paragraph command requires doc_id and text"
+            echo "  Usage: gdocs paragraph <doc_id> <text>"
+            exit 1
+        fi
+        DOC_ID="$1"
+        shift
+        echo "📝 Adding paragraph..."
+        cd "$SCRIPT_DIR" && uv run gdocs_edit.py paragraph "$DOC_ID" "$*"
+        ;;
+
+    bold)
+        if [ -z "$1" ] || [ -z "$2" ]; then
+            echo "❌ Error: bold command requires doc_id and text"
+            echo "  Usage: gdocs bold <doc_id> <text>"
+            exit 1
+        fi
+        DOC_ID="$1"
+        shift
+        echo "📝 Making text bold..."
+        cd "$SCRIPT_DIR" && uv run gdocs_edit.py bold "$DOC_ID" "$*"
+        ;;
+
+    open)
+        if [ -z "$1" ]; then
+            echo "❌ Error: open command requires doc_id"
+            echo "  Usage: gdocs open <doc_id>"
+            exit 1
+        fi
+        DOC_ID="$1"
+        echo "🌐 Opening document in browser..."
+        open "https://docs.google.com/document/d/$DOC_ID/edit"
+        ;;
+
+    *)
+        echo "❌ Unknown command: $command"
+        echo "Run 'gdocs help' for usage information"
+        exit 1
+        ;;
+esac

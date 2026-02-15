@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+google_docs_env/
+.agents/skills/**/.venv/
+
+# OAuth secrets and tokens
+**/client_secrets.json
+**/client_secret_*.json
+**/token.json
+.env
+.env.*
+
+# Generated artifacts
+doc_*.json
+*.docx
+*.pdf
+unpacked/
+
+# Packaging/build
+build/
+dist/
+*.egg-info/
+
+# OS/editor
+.DS_Store

@@ -1,0 +1,28 @@
+# OAuth credentials - contains secrets
+client_secrets.json
+
+# OAuth token - contains access/refresh tokens
+token.json
+
+# Virtual environment
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Python
+*.egg-info/
+dist/
+build/
+
+# uv lock file (optional - if you want per-skill lockfiles)
+# uv.lock
+
+# macOS
+.DS_Store
+
+# Test/output files
+*.txt
+*.json
+!pyproject.toml
+!client_secrets.json.template

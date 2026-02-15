@@ -1,0 +1,25 @@
+[project]
+name = "google-workspace-tools"
+version = "0.2.0"
+description = "Google Workspace API tools for Docs, Sheets, and Gmail"
+requires-python = ">=3.8"
+dependencies = [
+    "google-api-python-client>=2.100.0",
+    "google-auth-httplib2>=0.1.0",
+    "google-auth-oauthlib>=1.0.0",
+]
+
+[project.scripts]
+gworkspace = "google_workspace_tools.cli:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["google_workspace_tools"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0.0",
+]

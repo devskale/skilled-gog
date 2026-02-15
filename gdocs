@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOC_ID="1kJG9gFMy4M2iHfdxOhQ_KfNh1oy1P4aOdsDB-9626eg"
+
+command="${1:-help}"
+shift || true
+
+if [[ "$command" == "open" ]]; then
+    open "https://docs.google.com/document/d/$DOC_ID/edit"
+    exit 0
+fi
+
+if [[ "$command" == "help" || "$command" == "-h" || "$command" == "--help" ]]; then
+    echo "Google Docs Editor"
+    echo "Usage: $0 <recent|structure|append|insert|replace|paragraph|bold|open> [args...]"
+    exit 0
+fi
+
+cd "$SCRIPT_DIR"
+uv run gworkspace docs --doc-id "$DOC_ID" "$command" "$@"

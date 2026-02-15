@@ -1,0 +1,96 @@
+#!/bin/bash
+# Google Docs Editor - Download, Edit, Upload workflow
+
+set -e
+
+DOC_ID="1kJG9gFMy4M2iHfdxOhQ_KfNh1oy1P4aOdsDB-9626eg"
+LOCAL_FILE="my_google_doc.txt"
+DOCX_FILE="my_doc.docx"
+
+source google_docs_env/bin/activate
+
+case "$1" in
+    download)
+        FORMAT="${2:-txt}"
+        echo "📥 Downloading Google Doc as $FORMAT..."
+        if [ "$FORMAT" = "docx" ]; then
+            python3 google_docs_api.py download "$DOC_ID" "$DOCX_FILE" "docx"
+            echo "✓ Ready to edit: $DOCX_FILE"
+            echo "  Use your docx skill or any Word processor"
+        else
+            python3 google_docs_api.py download "$DOC_ID" "$LOCAL_FILE" "txt"
+            echo "✓ Ready to edit: $LOCAL_FILE"
+            echo "  Edit with: vim $LOCAL_FILE or use any LLM"
+        fi
+        ;;
+    upload)
+        INPUT_FILE="${2:-$LOCAL_FILE}"
+        if [ ! -f "$INPUT_FILE" ]; then
+            echo "❌ Error: $INPUT_FILE not found."
+            exit 1
+        fi
+        FORMAT="txt"
+        if [[ "$INPUT_FILE" == *.docx ]]; then
+            FORMAT="docx"
+        fi
+        echo "📤 Uploading to Google Doc..."
+        python3 google_docs_api.py upload "$DOC_ID" "$INPUT_FILE" "$FORMAT"
+        echo ""
+        if [ "$FORMAT" = "docx" ]; then
+            echo "⚠️ Note: DOCX upload creates a new file (can't update existing doc)"
+        else
+            echo "✓ Uploaded successfully!"
+        fi
+        ;;
+    edit)
+        FORMAT="${2:-txt}"
+        echo "📥 Downloading as $FORMAT..."
+        if [ "$FORMAT" = "docx" ]; then
+            python3 google_docs_api.py download "$DOC_ID" "$DOCX_FILE" "docx"
+            echo "✏️  Opening $DOCX_FILE..."
+            open "$DOCX_FILE"
+        else
+            python3 google_docs_api.py download "$DOC_ID" "$LOCAL_FILE" "txt"
+            echo "✏️  Opening editor..."
+            ${EDITOR:-vim} "$LOCAL_FILE"
+        fi
+        echo ""
+        read -p "Upload changes? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            if [ "$FORMAT" = "docx" ]; then
+                python3 google_docs_api.py upload "$DOC_ID" "$DOCX_FILE" "docx"
+            else
+                python3 google_docs_api.py upload "$DOC_ID" "$LOCAL_FILE" "txt"
+            fi
+            echo "✓ Uploaded!"
+        fi
+        ;;
+    llm)
+        echo "📥 Downloading..."
+        python3 google_docs_api.py download "$DOC_ID" "$LOCAL_FILE" "txt"
+        echo ""
+        echo "🤖 Open with LLM..."
+        echo "Run: llm chat $LOCAL_FILE"
+        echo "After editing, run: google-docs upload"
+        ;;
+    *)
+        echo "Google Docs Editor"
+        echo ""
+        echo "Usage: google-docs <command> [format]"
+        echo ""
+        echo "Commands:"
+        echo "  download [format]  - Download (format: txt, docx)"
+        echo "  upload [file]      - Upload local changes back"
+        echo "  edit [format]      - Download, edit, then upload"
+        echo "  llm                - Download for LLM editing"
+        echo ""
+        echo "Formats:"
+        echo "  txt   - Plain text (updates existing doc)"
+        echo "  docx  - Word document (creates new file)"
+        echo ""
+        echo "Current doc ID: $DOC_ID"
+        echo "Local files: $LOCAL_FILE, $DOCX_FILE"
+        echo "View online: https://docs.google.com/document/d/$DOC_ID/edit"
+        ;;
+esac

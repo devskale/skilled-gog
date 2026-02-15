@@ -1,0 +1,142 @@
+#!/bin/bash
+# Google Sheets API Editor - Edit Google Sheets directly
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+command="$1"
+shift || true
+
+case "$command" in
+    ""|"help"|"-h"|"--help")
+        echo "Google Sheets API Editor - Edit Google Sheets directly"
+        echo ""
+        echo "Usage: gsheets <command> <sheet_id> [args...]"
+        echo ""
+        echo "Commands:"
+        echo "  read [range] [output]  - Read spreadsheet"
+        echo "  update <range> <vals>  - Update values in range"
+        echo "  append <range> <vals>  - Append values to sheet"
+        echo "  clear <range>          - Clear values from range"
+        echo "  batch <json_file>      - Batch update from JSON"
+        echo "  open                   - Open sheet in browser"
+        echo ""
+        echo "Examples:"
+        echo "  # Read entire spreadsheet"
+        echo "  gsheets read <sheet_id>"
+        echo ""
+        echo "  # Read specific range"
+        echo "  gsheets read <sheet_id> \"Sheet1!A1:Z100\""
+        echo ""
+        echo "  # Update a single cell"
+        echo "  gsheets update <sheet_id> \"Sheet1!A1\" \"New Value\""
+        echo ""
+        echo "  # Update multiple cells (pipe-separated)"
+        echo "  gsheets update <sheet_id> \"Sheet1!A2:D2\" \"Val1|Val2|Val3|Val4\""
+        echo ""
+        echo "  # Update multiple cells (comma-separated)"
+        echo "  gsheets update <sheet_id> \"Sheet1!A2:D2\" \"Val1,Val2,Val3,Val4\""
+        echo ""
+        echo "  # Append a new row"
+        echo "  gsheets append <sheet_id> \"Sheet1!A:A\" \"Item|Description|100\""
+        echo ""
+        echo "  # Clear a range"
+        echo "  gsheets clear <sheet_id> \"Sheet1!A2:Z1000\""
+        echo ""
+        echo "  # Batch update from JSON file"
+        echo "  gsheets batch <sheet_id> update.json"
+        echo ""
+        echo "Finding Spreadsheet ID:"
+        echo "  Open spreadsheet in browser - URL is:"
+        echo "  https://docs.google.com/spreadsheets/d/<SHEET_ID>/edit"
+        echo "  Copy the <SHEET_ID> part."
+        echo ""
+        echo "JSON Format for Batch Update:"
+        echo '  {'
+        echo '    "data": ['
+        echo '      {'
+        echo '        "range": "Sheet1!A1:B2",'
+        echo '        "values": [["Header1", "Header2"], ["Value1", "Value2"]]'
+        echo '      }'
+        echo '    ]'
+        echo '  }'
+        ;;
+
+    read)
+        if [ -z "$1" ]; then
+            echo "❌ Error: read command requires sheet_id"
+            echo "  Usage: gsheets read <sheet_id> [range] [output]"
+            exit 1
+        fi
+        SHEET_ID="$1"
+        shift
+        cd "$SCRIPT_DIR" && uv run google_sheets_api.py read "$SHEET_ID" "$@"
+        ;;
+
+    update)
+        if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
+            echo "❌ Error: update command requires sheet_id, range, and values"
+            echo "  Usage: gsheets update <sheet_id> <range> <values>"
+            exit 1
+        fi
+        SHEET_ID="$1"
+        RANGE="$2"
+        shift 2
+        # Join remaining args with pipe separator
+        VALUES=$(IFS='|'; echo "$*")
+        cd "$SCRIPT_DIR" && uv run google_sheets_api.py update "$SHEET_ID" "$RANGE" "$VALUES"
+        ;;
+
+    append)
+        if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
+            echo "❌ Error: append command requires sheet_id, range, and values"
+            echo "  Usage: gsheets append <sheet_id> <range> <values>"
+            exit 1
+        fi
+        SHEET_ID="$1"
+        RANGE="$2"
+        shift 2
+        VALUES=$(IFS='|'; echo "$*")
+        cd "$SCRIPT_DIR" && uv run google_sheets_api.py append "$SHEET_ID" "$RANGE" "$VALUES"
+        ;;
+
+    clear)
+        if [ -z "$1" ] || [ -z "$2" ]; then
+            echo "❌ Error: clear command requires sheet_id and range"
+            echo "  Usage: gsheets clear <sheet_id> <range>"
+            exit 1
+        fi
+        SHEET_ID="$1"
+        shift
+        cd "$SCRIPT_DIR" && uv run google_sheets_api.py clear "$SHEET_ID" "$@"
+        ;;
+
+    batch)
+        if [ -z "$1" ] || [ -z "$2" ]; then
+            echo "❌ Error: batch command requires sheet_id and json_file"
+            echo "  Usage: gsheets batch <sheet_id> <json_file>"
+            exit 1
+        fi
+        SHEET_ID="$1"
+        shift
+        cd "$SCRIPT_DIR" && uv run google_sheets_api.py batch "$SHEET_ID" "$@"
+        ;;
+
+    open)
+        if [ -z "$1" ]; then
+            echo "❌ Error: open command requires sheet_id"
+            echo "  Usage: gsheets open <sheet_id>"
+            exit 1
+        fi
+        SHEET_ID="$1"
+        echo "🌐 Opening spreadsheet in browser..."
+        open "https://docs.google.com/spreadsheets/d/$SHEET_ID/edit"
+        ;;
+
+    *)
+        echo "❌ Unknown command: $command"
+        echo "Run 'gsheets help' for usage information"
+        exit 1
+        ;;
+esac

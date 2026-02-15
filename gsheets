@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SHEET_ID="1MYNuzKqGEQszGO5iegXMWBzis7zdTSdvg4F3-kFWm-Q"
+
+if [[ "${1:-}" == "--id" ]]; then
+    SHEET_ID="${2:-$SHEET_ID}"
+    shift 2
+fi
+
+command="${1:-help}"
+shift || true
+
+if [[ "$command" == "open" ]]; then
+    open "https://docs.google.com/spreadsheets/d/$SHEET_ID/edit"
+    exit 0
+fi
+
+if [[ "$command" == "help" || "$command" == "-h" || "$command" == "--help" ]]; then
+    echo "Google Sheets API Editor"
+    echo "Usage: $0 [--id <sheet_id>] <read|update|append|clear|batch|open> [args...]"
+    exit 0
+fi
+
+cd "$SCRIPT_DIR"
+uv run gworkspace sheets --sheet-id "$SHEET_ID" "$command" "$@"
