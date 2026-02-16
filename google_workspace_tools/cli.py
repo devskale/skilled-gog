@@ -23,6 +23,8 @@ def build_parser() -> argparse.ArgumentParser:
         "command",
         choices=[
             "recent",
+            "download",
+            "upload",
             "export-md",
             "import-md",
             "structure",

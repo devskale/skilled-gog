@@ -14,9 +14,10 @@ fi
 
 if [[ "$command" == "help" || "$command" == "-h" || "$command" == "--help" ]]; then
     echo "Google Docs Editor"
-    echo "Usage: $0 <recent|export-md|import-md|structure|append|insert|replace|paragraph|bold|tabs|open> [args...]"
-    echo "Export: $0 export-md [out_dir] [version]"
-    echo "Import: $0 import-md <markdown_file> <version>"
+    echo "Usage: $0 <recent|download|upload|export-md|import-md|structure|append|insert|replace|paragraph|bold|tabs|open> [args...]"
+    echo "Download: $0 download [out_dir] [version]"
+    echo "Upload:   $0 upload <markdown_file> <version>"
+    echo "Legacy aliases: export-md, import-md"
     exit 0
 fi
 

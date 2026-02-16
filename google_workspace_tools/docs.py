@@ -480,7 +480,8 @@ def _tab_to_markdown_lines(
 ) -> None:
     props = tab.get("tabProperties", {})
     title = props.get("title", "Untitled Tab")
-    lines.append(f"{'#' * min(6, depth + 2)} Tab: {title}")
+    # Always flatten tabs to top-level H1 headings in markdown export.
+    lines.append(f"# {title}")
     lines.append("")
 
     document_tab = tab.get("documentTab", {})
@@ -525,9 +526,16 @@ def export_markdown(doc_id: str, out_dir_arg: str | None = None, version: str = 
     )
     doc_name = file_meta.get("name", "document")
 
-    root_dir = Path(out_dir_arg) if out_dir_arg else Path("docs") / _slugify(doc_name)
+    if out_dir_arg:
+        root_dir = Path(out_dir_arg)
+        markdown_filename = "doc.md"
+    else:
+        slug = _slugify(doc_name)
+        root_dir = Path("docs") / slug
+        markdown_filename = f"{slug}.md"
+
     root_dir.mkdir(parents=True, exist_ok=True)
-    markdown_path = root_dir / "doc.md"
+    markdown_path = root_dir / markdown_filename
     img_dir = root_dir / "img"
 
     doc_with_tabs = get_document(doc_id, include_tabs_content=True)
@@ -604,6 +612,7 @@ def import_markdown(markdown_file: str, version: str) -> dict:
     print(f"OK: uploaded markdown as Google Doc {created.get('name', '')}")
     print(f"   id: {created.get('id', '')}")
     print(f"   link: {created.get('webViewLink', '')}")
+    print("INFO: markdown upload creates a single-body Google Doc (tab structure is not restored).")
     return created
 
 
@@ -612,14 +621,14 @@ def run_command(command: str, doc_id: str, args: list[str]) -> int:
         if command == "recent":
             limit = int(args[0]) if args else 10
             print_recent_documents(limit)
-        elif command == "export-md":
+        elif command in ("export-md", "download"):
             out_dir = args[0] if args else None
             version = args[1] if len(args) > 1 else "1.0"
             export_markdown(doc_id, out_dir, version)
             print("OK: markdown export completed")
-        elif command == "import-md":
+        elif command in ("import-md", "upload"):
             if len(args) < 2:
-                print("Error: import-md requires <markdown_file> <version>")
+                print("Error: upload/import-md requires <markdown_file> <version>")
                 return 2
             import_markdown(args[0], args[1])
             print("OK: markdown import completed")

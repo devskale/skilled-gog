@@ -71,8 +71,8 @@ rm -f token.json
 gworkspace docs recent 10
 
 # Markdown workflow (recommended for large rewrites)
-gworkspace docs --doc-id "<doc_id>" export-md "/tmp/gdoc_export_test" 1.0
-gworkspace docs import-md "/tmp/gdoc_export_test/doc.md" 1.2
+gworkspace docs --doc-id "<doc_id>" download "/tmp/gdoc_export_test" 1.0
+gworkspace docs upload "/tmp/gdoc_export_test/doc.md" 1.2
 
 # Document structure
 gworkspace docs structure
@@ -123,8 +123,8 @@ gworkspace gmail send --approve-send "alice@example.com" "Subject" "Body text"
 
 ```bash
 ./gdocs recent 10
-./gdocs export-md "/tmp/gdoc_export_test" 1.0
-./gdocs import-md "/tmp/gdoc_export_test/doc.md" 1.2
+./gdocs download "/tmp/gdoc_export_test" 1.0
+./gdocs upload "/tmp/gdoc_export_test/doc.md" 1.2
 ./gdocs structure
 ./gsheets read
 ./gmail list
@@ -140,12 +140,13 @@ Use this for extensive edits instead of many API mutations.
 ### Export
 
 ```bash
-gworkspace docs --doc-id "<doc_id>" export-md "/tmp/gdoc_export_test" 1.0
+gworkspace docs --doc-id "<doc_id>" download "/tmp/gdoc_export_test" 1.0
 ```
 
 What export does:
 - Downloads as Markdown
 - Merges all tabs recursively into one `doc.md`
+- Converts every tab boundary to a top-level `#` heading in `doc.md`
 - Adds YAML frontmatter (`doc_id`, `doc_url`, `drive_parent_id`, `version`, etc.)
 - Stores images in relative `img/`
 
@@ -163,7 +164,7 @@ Output structure:
 
 ```bash
 sed -n '1,30p' /tmp/gdoc_export_test/doc.md
-rg -n "^## Tab:|^### Tab:" /tmp/gdoc_export_test/doc.md
+rg -n "^# " /tmp/gdoc_export_test/doc.md
 ls -la /tmp/gdoc_export_test/img
 ```
 
@@ -171,13 +172,14 @@ ls -la /tmp/gdoc_export_test/img
 
 ```bash
 # edit /tmp/gdoc_export_test/doc.md locally
-gworkspace docs import-md "/tmp/gdoc_export_test/doc.md" 1.2
+gworkspace docs upload "/tmp/gdoc_export_test/doc.md" 1.2
 ```
 
 Import behavior:
 - Creates new doc `filename_V1.2`
 - Writes metadata to Drive `appProperties`
 - Adds visible import header in the doc for human traceability
+- Upload does not recreate Google Docs tabs (single-body doc upload)
 
 ## Google Docs Tabs
 

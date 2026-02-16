@@ -105,8 +105,8 @@ def test_render_tabs_markdown_merges_parent_and_child(tmp_path: Path):
         ]
     }
     md, image_count = _render_tabs_markdown(doc, tmp_path / "img")
-    assert "## Tab: Root" in md
+    assert "# Root" in md
     assert "Root text" in md
-    assert "### Tab: Child" in md
+    assert "# Child" in md
     assert "## Child heading" in md
     assert image_count == 0

@@ -27,7 +27,7 @@ gworkspace --version
 
 ## Features
 
-- **Google Docs**: `recent`, `export-md`, `import-md`, `structure`, `append`, `insert`, `replace`, `paragraph`, `bold`, `tabs`
+- **Google Docs**: `recent`, `download`, `upload`, `structure`, `append`, `insert`, `replace`, `paragraph`, `bold`, `tabs` (`export-md`/`import-md` remain aliases)
 - **Google Sheets**: `read`, `update`, `append`, `clear`, `batch`
 - **Gmail**: `list`, `get`, `body`, `draft`, `send`
 - Shared OAuth2 credential flow across all services
@@ -41,8 +41,11 @@ gworkspace --version
 gworkspace docs recent 10
 gworkspace docs structure
 gworkspace docs append "Hello"
-gworkspace docs export-md ./docs/mydoc 1.0
-gworkspace docs import-md ./docs/mydoc/doc.md 1.2
+gworkspace docs download ./docs/mydoc 1.0
+gworkspace docs upload ./docs/mydoc/doc.md 1.2
+
+# Note: tabbed docs are flattened on download (tab boundaries become `#` H1 headings).
+# Upload creates a single-body Google Doc and does not recreate tab structure.
 
 # Sheets
 gworkspace sheets read
