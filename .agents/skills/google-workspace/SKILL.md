@@ -5,47 +5,42 @@ description: Operate Google Docs, Google Sheets, and Gmail from this workspace u
 
 # Google Workspace Skill
 
-This skill uses the `google_workspace_tools` Python package in this project.
+This skill uses the `google_workspace_tools` Python package for Google Docs, Sheets, and Gmail operations.
 
-**Commands:**
-- `uv run gworkspace docs ...`
-- `uv run gworkspace sheets ...`
-- `uv run gworkspace gmail ...`
+## Installation
 
-**Convenience wrappers:**
-- `./gdocs ...` (uses default doc ID)
-- `./gsheets ...` (uses default sheet ID)
-- `./gmail ...`
-
-## Google Docs Tabs Support
-
-Google Docs supports tabs (like sheets in Google Sheets). Each document can have multiple tabs with their own content, and tabs can be nested.
-
-**Key Concepts:**
-- Each tab has a unique `tabId` and `title`
-- Tab content is accessed via `document.tabs[].documentTab.body`
-- Most operations can target a specific tab using `--tab <tab_id>`
-
-## Preconditions
-
-1. `uv` installed
-2. `client_secrets.json` present in project root
-3. APIs enabled in Google Cloud project (ID: 667256544145):
-   - Docs API
-   - Sheets API
-   - Gmail API (if Gmail commands are used)
-
-## One-Time Setup
+### Quick Install
 
 ```bash
+curl -fsSL https://gworkspace.skale.dev/install.sh | bash
+```
+
+Or directly from GitHub:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/devskale/skilled-gog/main/install.sh | bash
+```
+
+### Manual Install
+
+```bash
+# Clone and enter
+git clone https://github.com/devskale/skilled-gog.git ~/.gworkspace
+cd ~/.gworkspace
+
+# Install dependencies
 uv sync
+
+# Run
+uv run gworkspace docs recent 10
 ```
 
-Authenticate by running any command once:
+### Credentials Setup
 
-```bash
-./gdocs structure
-```
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials?project=667256544145)
+2. Create OAuth 2.0 credentials (Desktop application)
+3. Download JSON and save as `~/.gworkspace/client_secrets.json`
+4. Run any command to authenticate
 
 ## Commands
 
@@ -53,128 +48,99 @@ Authenticate by running any command once:
 
 ```bash
 # View recent documents
-uv run gworkspace docs recent 10
+gworkspace docs recent 10
 
 # Document structure
-uv run gworkspace docs structure
-uv run gworkspace docs structure --tabs          # Show all tabs structure
+gworkspace docs structure
 
 # Text operations
-uv run gworkspace docs append "Text"
-uv run gworkspace docs append "Text" --tab <id>  # Append to specific tab
-uv run gworkspace docs insert "anchor" "new text"
-uv run gworkspace docs replace "old" "new"
-uv run gworkspace docs paragraph "Heading"
-uv run gworkspace docs bold "Important"
+gworkspace docs append "Text"
+gworkspace docs insert "anchor" "new text"
+gworkspace docs replace "old" "new"
+gworkspace docs paragraph "Heading"
+gworkspace docs bold "Important"
 
 # Tabs
-uv run gworkspace docs tabs list                 # List all tabs
-uv run gworkspace docs tabs create "New Tab"     # Create new tab
-uv run gworkspace docs tabs delete <tab_id>      # Delete tab
-uv run gworkspace docs tabs rename <id> "Name"   # Rename tab
+gworkspace docs tabs list
+gworkspace docs tabs create "New Tab"
+gworkspace docs tabs delete <tab_id>
+gworkspace docs tabs rename <id> "Name"
 
 # Drive (document management)
-uv run gworkspace docs copy <doc_id> [name]      # Copy document
-uv run gworkspace docs rename <doc_id> <name>    # Rename document
-uv run gworkspace docs move <doc_id> <folder_id> # Move to folder
-uv run gworkspace docs delete <doc_id>           # Move to trash
+gworkspace docs copy <doc_id> [name]
+gworkspace docs rename <doc_id> <name>
+gworkspace docs move <doc_id> <folder_id>
+gworkspace docs delete <doc_id>
 ```
 
 ### Sheets
 
 ```bash
-uv run gworkspace sheets read
-uv run gworkspace sheets read "BOM!A1:Z100"
-uv run gworkspace sheets update "BOM!A2:D2" "A|B|C|D"
-uv run gworkspace sheets append "BOM!A:A" "Item|Description|100"
-uv run gworkspace sheets clear "BOM!A2:Z1000"
-uv run gworkspace sheets batch update.json
+gworkspace sheets read
+gworkspace sheets read "BOM!A1:Z100"
+gworkspace sheets update "BOM!A2:D2" "A|B|C|D"
+gworkspace sheets append "BOM!A:A" "Item|Description|100"
+gworkspace sheets clear "BOM!A2:Z1000"
+gworkspace sheets batch update.json
 ```
 
 ### Gmail
 
 ```bash
-uv run gworkspace gmail list 10
-uv run gworkspace gmail get <message_id>
-uv run gworkspace gmail body <message_id>
+gworkspace gmail list 10
+gworkspace gmail get <message_id>
+gworkspace gmail body <message_id>
 ```
 
-### Wrappers (same behavior, use defaults)
+## Google Docs Tabs
 
-```bash
-./gdocs recent 10
-./gdocs structure
-./gdocs append "Text"
-./gsheets read
-./gsheets update "Sheet1!A1" "Value"
-./gmail list
-```
-
-Use custom sheet ID with wrapper:
-
-```bash
-./gsheets --id <sheet_id> read "Sheet1!A1:C20"
-```
-
-## Defaults
-
-- Default document ID: `1kJG9gFMy4M2iHfdxOhQ_KfNh1oy1P4aOdsDB-9626eg`
-- Default sheet ID: `1MYNuzKqGEQszGO5iegXMWBzis7zdTSdvg4F3-kFWm-Q`
-
-## Working with Tabs
+Google Docs supports tabs (like sheets in Google Sheets):
 
 ```bash
 # List all tabs
-uv run gworkspace docs tabs list
+gworkspace docs tabs list
 
-# Create a child tab (nested)
-uv run gworkspace docs tabs create "Child Tab" --parent <parent_tab_id>
+# Create a child tab
+gworkspace docs tabs create "Child" --parent <parent_tab_id>
 
 # Work with specific tab
-uv run gworkspace docs append "Text" --tab t.abc123
-uv run gworkspace docs replace "old" "new" --tab t.abc123
-
-# Manage tabs
-./gdocs tabs list
-./gdocs tabs create "New Tab"
-./gdocs tabs delete <tab_id>
-./gdocs tabs rename <tab_id> "New Name"
+gworkspace docs append "Text" --tab t.abc123
+gworkspace docs replace "old" "new" --tab t.abc123
 ```
+
+## Default Documents
+
+| Name | Type | ID |
+|------|------|-----|
+| BOC Bootsklemme Pflichtenheft | Docs | `1kJG9gFMy4M2iHfdxOhQ_KfNh1oy1P4aOdsDB-9626eg` |
+| BOM (Bill of Material for SY3) | Sheets | `1MYNuzKqGEQszGO5iegXMWBzis7zdTSdvg4F3-kFWm-Q` |
 
 ## Troubleshooting
 
-Re-authenticate if scopes changed:
+### Re-authenticate
 
 ```bash
-rm -f token.json
-./gdocs structure
+rm -f ~/.gworkspace/token.json
+gworkspace docs recent 1
 ```
 
-If Gmail fails with API disabled, enable:
+### Enable APIs
 
-https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=667256544145
+- **Docs:** https://console.developers.google.com/apis/api/docs.googleapis.com/overview?project=667256544145
+- **Sheets:** https://console.developers.google.com/apis/api/sheets.googleapis.com/overview?project=667256544145
+- **Gmail:** https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=667256544145
 
 ## Project Structure
 
 ```
-.
-├── google_workspace_tools/     # Main Python package
-│   ├── __init__.py
-│   ├── auth.py                 # Centralized OAuth
-│   ├── cli.py                  # Unified CLI entry point
-│   ├── docs.py                 # Docs operations
-│   ├── sheets.py               # Sheets operations
-│   └── gmail.py                # Gmail operations
-├── tests/                      # Test files
-├── gdocs                       # Docs wrapper
-├── gsheets                     # Sheets wrapper
-├── gmail                       # Gmail wrapper
-├── pyproject.toml              # Package config
-├── client_secrets.json         # OAuth credentials (gitignored)
-└── token.json                  # OAuth token (gitignored)
+~/.gworkspace/
+├── google_workspace_tools/   # Python package
+│   ├── auth.py               # Centralized OAuth
+│   ├── cli.py                # CLI entry point
+│   ├── docs.py
+│   ├── sheets.py
+│   └── gmail.py
+├── client_secrets.json       # Your OAuth credentials
+├── token.json                # Auto-generated token
+└── install.sh                # Install script
 ```
-
-## Notes
-
-- `token.json` and `client_secrets.json` are local secret files (gitignored)
-- Uses `uv` for dependency management - do not use `pip` directly

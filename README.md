@@ -1,67 +1,89 @@
 # Google Workspace Tools
 
-A proper Python project for Google Workspace automation with a unified CLI and lightweight wrappers.
+A Python CLI for Google Workspace automation (Docs, Sheets, Gmail) with unified OAuth2 authentication.
+
+## Quick Install
+
+```bash
+curl -fsSL https://gworkspace.skale.dev/install.sh | bash
+```
+
+Or directly from GitHub:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/devskale/skilled-gog/main/install.sh | bash
+```
 
 ## Features
 
-- Google Docs operations: `structure`, `append`, `insert`, `replace`, `paragraph`, `bold`
-- Google Sheets operations: `read`, `update`, `append`, `clear`, `batch`
-- Gmail operations: `list`, `get`, `body`
+- **Google Docs**: `structure`, `append`, `insert`, `replace`, `paragraph`, `bold`, `tabs`
+- **Google Sheets**: `read`, `update`, `append`, `clear`, `batch`
+- **Gmail**: `list`, `get`, `body`
 - Shared OAuth2 credential flow across all services
 
-## Project Layout
+## Usage
 
-- `google_workspace_tools/` package source
-- `tests/` unit tests
-- `gdocs`, `gsheets`, `gmail` wrapper commands
-- `pyproject.toml` project metadata and CLI entrypoint
-
-## Install
-
-```bash
-uv sync
-```
-
-## Unified CLI
+### Unified CLI
 
 ```bash
 # Docs
-uv run gworkspace docs structure
-uv run gworkspace docs append "Hello"
+gworkspace docs recent 10
+gworkspace docs structure
+gworkspace docs append "Hello"
 
 # Sheets
-uv run gworkspace sheets read
-uv run gworkspace sheets update "BOM!A2:D2" "Val1|Val2|Val3|Val4"
+gworkspace sheets read
+gworkspace sheets update "BOM!A2:D2" "Val1|Val2|Val3|Val4"
 
 # Gmail
-uv run gworkspace gmail list 10
+gworkspace gmail list 10
 ```
 
-## Wrapper Commands
-
-Wrappers keep the original workflow and default IDs:
+### Local Development
 
 ```bash
+# Clone and install
+git clone https://github.com/devskale/skilled-gog.git
+cd skilled-gog
+uv sync
+
+# Run locally
+uv run gworkspace docs structure
+
+# Or use wrappers with default IDs
 ./gdocs structure
 ./gsheets read
 ./gmail list 20
 ```
 
-Custom sheet ID:
+## Credentials Setup
 
-```bash
-./gsheets --id <sheet_id> read "Sheet1!A1:C10"
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials?project=667256544145)
+2. Create OAuth 2.0 credentials (Desktop application)
+3. Download JSON and save as `client_secrets.json`
+4. Run any command to authenticate
+
+## Project Layout
+
 ```
+google_workspace_tools/   # Python package
+├── auth.py               # Centralized OAuth
+├── cli.py                # CLI entry point
+├── docs.py               # Docs operations
+├── sheets.py             # Sheets operations
+└── gmail.py              # Gmail operations
 
-## Auth Files
-
-- `client_secrets.json` (OAuth client credentials)
-- `token.json` (generated access token)
-
-Both are ignored by `.gitignore`.
+tests/                    # Unit tests
+gdocs, gsheets, gmail     # Local wrappers
+install.sh                # Install script
+```
 
 ## Run Tests
 
 ```bash
 uv run pytest
 ```
+
+## License
+
+MIT
