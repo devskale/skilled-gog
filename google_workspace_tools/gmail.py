@@ -40,10 +40,16 @@ def get_message(message_id: str, fmt: str = "full") -> dict:
     return _service().users().messages().get(userId="me", id=message_id, format=fmt).execute()
 
 
-def build_raw_message(to: str, subject: str, body: str) -> str:
+def build_raw_message(to: str, subject: str, body: str, cc: str | None = None, bcc: str | None = None) -> str:
+    """Build a raw email message with AI footer."""
     msg = EmailMessage()
     msg["To"] = to
     msg["Subject"] = subject
+    if cc:
+        msg["Cc"] = cc
+    if bcc:
+        msg["Bcc"] = bcc
+
     content = body.rstrip()
     if AI_FOOTER not in content:
         content = f"{content}\n\n{AI_FOOTER}" if content else AI_FOOTER
@@ -51,8 +57,9 @@ def build_raw_message(to: str, subject: str, body: str) -> str:
     return base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
 
 
-def create_draft(to: str, subject: str, body: str) -> dict:
-    raw_message = build_raw_message(to, subject, body)
+def create_draft(to: str, subject: str, body: str, cc: str | None = None, bcc: str | None = None) -> dict:
+    """Create an email draft."""
+    raw_message = build_raw_message(to, subject, body, cc, bcc)
     return (
         _service()
         .users()
@@ -62,8 +69,9 @@ def create_draft(to: str, subject: str, body: str) -> dict:
     )
 
 
-def send_message(to: str, subject: str, body: str) -> dict:
-    raw_message = build_raw_message(to, subject, body)
+def send_message(to: str, subject: str, body: str, cc: str | None = None, bcc: str | None = None) -> dict:
+    """Send an email message."""
+    raw_message = build_raw_message(to, subject, body, cc, bcc)
     return _service().users().messages().send(userId="me", body={"raw": raw_message}).execute()
 
 
@@ -134,10 +142,14 @@ def run_command(command: str, args: list[str]) -> int:
             return 0
 
         if command == "draft":
+            if len(args) < 3:
+                print("Usage: gworkspace gmail draft <to> <subject> <body...>")
+                return 2
             to = args[0]
             subject = args[1]
             body = " ".join(args[2:]) if len(args) > 2 else ""
-            draft = create_draft(to, subject, body)
+            cc = args[3] if len(args) > 3 else None
+            draft = create_draft(to, subject, body, cc)
             print(f"Draft created: {draft.get('id', '')}")
             print("Open drafts: https://mail.google.com/mail/u/0/#drafts")
             return 0
@@ -158,8 +170,11 @@ def run_command(command: str, args: list[str]) -> int:
             to = filtered_args[0]
             subject = filtered_args[1]
             body = " ".join(filtered_args[2:]) if len(filtered_args) > 2 else ""
-            sent = send_message(to, subject, body)
+            cc = filtered_args[3] if len(filtered_args) > 3 else None
+            sent = send_message(to, subject, body, cc)
             print(f"Message sent: {sent.get('id', '')}")
+            print(f"  To: {to}")
+            print(f"  Subject: {subject}")
             return 0
 
         print(f"Unknown gmail command: {command}")
