@@ -56,7 +56,7 @@ Important:
 - If you switch services and see `insufficient authentication scopes` or `invalid_scope`, re-authenticate:
 
 ```bash
-cd /Users/johannwaldherr/code/google
+cd ~/.gworkspace
 rm -f token.json
 # then run the service command again, e.g.
 ./gmail list 1
@@ -69,6 +69,10 @@ rm -f token.json
 ```bash
 # View recent documents
 gworkspace docs recent 10
+
+# Markdown workflow (recommended for large rewrites)
+gworkspace docs --doc-id "<doc_id>" export-md "/tmp/gdoc_export_test" 1.0
+gworkspace docs import-md "/tmp/gdoc_export_test/doc.md" 1.2
 
 # Document structure
 gworkspace docs structure
@@ -119,6 +123,8 @@ gworkspace gmail send --approve-send "alice@example.com" "Subject" "Body text"
 
 ```bash
 ./gdocs recent 10
+./gdocs export-md "/tmp/gdoc_export_test" 1.0
+./gdocs import-md "/tmp/gdoc_export_test/doc.md" 1.2
 ./gdocs structure
 ./gsheets read
 ./gmail list
@@ -126,6 +132,52 @@ gworkspace gmail send --approve-send "alice@example.com" "Subject" "Body text"
 ./gmail draft "alice@example.com" "Subject" "Body text"
 ./gmail send --approve-send "alice@example.com" "Subject" "Body text"
 ```
+
+## Markdown Download (Docs)
+
+Use this for extensive edits instead of many API mutations.
+
+### Export
+
+```bash
+gworkspace docs --doc-id "<doc_id>" export-md "/tmp/gdoc_export_test" 1.0
+```
+
+What export does:
+- Downloads as Markdown
+- Merges all tabs recursively into one `doc.md`
+- Adds YAML frontmatter (`doc_id`, `doc_url`, `drive_parent_id`, `version`, etc.)
+- Stores images in relative `img/`
+
+Output structure:
+
+```text
+/tmp/gdoc_export_test/
+  doc.md
+  img/
+    image1.png
+    image2.png
+```
+
+### Verify Export
+
+```bash
+sed -n '1,30p' /tmp/gdoc_export_test/doc.md
+rg -n "^## Tab:|^### Tab:" /tmp/gdoc_export_test/doc.md
+ls -la /tmp/gdoc_export_test/img
+```
+
+### Local Edit + Upload New Version
+
+```bash
+# edit /tmp/gdoc_export_test/doc.md locally
+gworkspace docs import-md "/tmp/gdoc_export_test/doc.md" 1.2
+```
+
+Import behavior:
+- Creates new doc `filename_V1.2`
+- Writes metadata to Drive `appProperties`
+- Adds visible import header in the doc for human traceability
 
 ## Google Docs Tabs
 

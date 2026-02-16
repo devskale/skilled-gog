@@ -21,7 +21,18 @@ def build_parser() -> argparse.ArgumentParser:
     docs_parser = subparsers.add_parser("docs", help="Google Docs operations")
     docs_parser.add_argument(
         "command",
-        choices=["recent", "structure", "append", "insert", "replace", "paragraph", "bold", "tabs"],
+        choices=[
+            "recent",
+            "export-md",
+            "import-md",
+            "structure",
+            "append",
+            "insert",
+            "replace",
+            "paragraph",
+            "bold",
+            "tabs",
+        ],
     )
     docs_parser.add_argument("args", nargs="*")
     docs_parser.add_argument("--doc-id", default=DEFAULT_DOC_ID)

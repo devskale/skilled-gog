@@ -6,7 +6,7 @@
 # Installs the gworkspace CLI for Google Docs, Sheets, and Gmail operations.
 #
 
-set -e
+set -euo pipefail
 
 REPO_URL="https://github.com/devskale/skilled-gog.git"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.gworkspace}"
@@ -21,12 +21,7 @@ info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
-check_command() {
-    if ! command -v "$1" &> /dev/null; then
-        return 1
-    fi
-    return 0
-}
+check_command() { command -v "$1" >/dev/null 2>&1; }
 
 install_uv() {
     info "Installing uv..."
@@ -40,6 +35,40 @@ install_uv() {
 
     # Add uv to PATH for current session
     export PATH="$HOME/.local/bin:$PATH"
+}
+
+resolve_uv_path() {
+    if check_command uv; then
+        command -v uv
+        return
+    fi
+    if [ -x "$HOME/.local/bin/uv" ]; then
+        echo "$HOME/.local/bin/uv"
+        return
+    fi
+    return 1
+}
+
+create_wrapper() {
+    local target="$1"
+    local service="$2"
+    local install_dir="$3"
+    cat > "$target" <<WRAPPER
+#!/bin/bash
+set -euo pipefail
+INSTALL_DIR="$install_dir"
+if command -v uv >/dev/null 2>&1; then
+  UV_BIN="\$(command -v uv)"
+elif [ -x "\$HOME/.local/bin/uv" ]; then
+  UV_BIN="\$HOME/.local/bin/uv"
+else
+  echo "uv not found. Install uv first: https://docs.astral.sh/uv/" >&2
+  exit 1
+fi
+cd "\$INSTALL_DIR"
+exec "\$UV_BIN" run gworkspace $service "\$@"
+WRAPPER
+    chmod +x "$target"
 }
 
 main() {
@@ -56,13 +85,8 @@ main() {
     fi
 
     # Verify uv is available
-    UV_PATH=$(command -v uv || echo "$HOME/.local/bin/uv")
-    if [ ! -x "$UV_PATH" ]; then
-        export PATH="$HOME/.local/bin:$PATH"
-        UV_PATH="$HOME/.local/bin/uv"
-    fi
-
-    if [ ! -x "$UV_PATH" ]; then
+    UV_PATH="$(resolve_uv_path || true)"
+    if [ -z "${UV_PATH:-}" ] || [ ! -x "$UV_PATH" ]; then
         error "uv installation failed. Please install uv manually: https://docs.astral.sh/uv/"
     fi
 
@@ -77,7 +101,8 @@ main() {
     if [ -d "$INSTALL_DIR/.git" ]; then
         info "Updating existing installation..."
         cd "$INSTALL_DIR"
-        git pull --quiet
+        git fetch --quiet origin
+        git reset --quiet --hard origin/main
     else
         info "Cloning repository..."
         rm -rf "$INSTALL_DIR"
@@ -89,26 +114,12 @@ main() {
     info "Installing dependencies..."
     "$UV_PATH" sync --quiet
 
-    # Create wrapper script
-    info "Creating gworkspace CLI wrapper..."
-    cat > "$BIN_DIR/gworkspace" << 'WRAPPER'
-#!/bin/bash
-set -e
-cd "$HOME/.gworkspace"
-uv run gworkspace "$@"
-WRAPPER
-    chmod +x "$BIN_DIR/gworkspace"
-
-    # Create convenience wrappers
-    for cmd in gdocs gsheets gmail; do
-        cat > "$BIN_DIR/$cmd" << WRAPPER
-#!/bin/bash
-set -e
-cd "$HOME/.gworkspace"
-uv run gworkspace ${cmd#g} "\$@"
-WRAPPER
-        chmod +x "$BIN_DIR/$cmd"
-    done
+    # Create wrapper scripts
+    info "Creating CLI wrappers..."
+    create_wrapper "$BIN_DIR/gworkspace" "" "$INSTALL_DIR"
+    create_wrapper "$BIN_DIR/gdocs" "docs" "$INSTALL_DIR"
+    create_wrapper "$BIN_DIR/gsheets" "sheets" "$INSTALL_DIR"
+    create_wrapper "$BIN_DIR/gmail" "gmail" "$INSTALL_DIR"
 
     # Check if BIN_DIR is in PATH
     if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
@@ -118,7 +129,7 @@ WRAPPER
         echo ""
         echo "    export PATH=\"\$HOME/.local/bin:\$PATH\""
         echo ""
-        echo "Then restart your shell or run: source ~/.bashrc"
+        echo "Then restart your shell or run: source ~/.zshrc"
     fi
 
     echo ""

@@ -14,7 +14,9 @@ fi
 
 if [[ "$command" == "help" || "$command" == "-h" || "$command" == "--help" ]]; then
     echo "Google Docs Editor"
-    echo "Usage: $0 <recent|structure|append|insert|replace|paragraph|bold|open> [args...]"
+    echo "Usage: $0 <recent|export-md|import-md|structure|append|insert|replace|paragraph|bold|tabs|open> [args...]"
+    echo "Export: $0 export-md [out_dir] [version]"
+    echo "Import: $0 import-md <markdown_file> <version>"
     exit 0
 fi
 

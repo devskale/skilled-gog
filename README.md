@@ -14,11 +14,22 @@ Or directly from GitHub:
 curl -fsSL https://raw.githubusercontent.com/devskale/skilled-gog/main/install.sh | bash
 ```
 
+Default install paths:
+- Project checkout: `~/.gworkspace`
+- CLI wrappers: `~/.local/bin` (`gworkspace`, `gdocs`, `gsheets`, `gmail`)
+
+Verify installation:
+
+```bash
+which gworkspace
+gworkspace --version
+```
+
 ## Features
 
-- **Google Docs**: `structure`, `append`, `insert`, `replace`, `paragraph`, `bold`, `tabs`
+- **Google Docs**: `recent`, `export-md`, `import-md`, `structure`, `append`, `insert`, `replace`, `paragraph`, `bold`, `tabs`
 - **Google Sheets**: `read`, `update`, `append`, `clear`, `batch`
-- **Gmail**: `list`, `get`, `body`, `send`
+- **Gmail**: `list`, `get`, `body`, `draft`, `send`
 - Shared OAuth2 credential flow across all services
 
 ## Usage
@@ -30,6 +41,8 @@ curl -fsSL https://raw.githubusercontent.com/devskale/skilled-gog/main/install.s
 gworkspace docs recent 10
 gworkspace docs structure
 gworkspace docs append "Hello"
+gworkspace docs export-md ./docs/mydoc 1.0
+gworkspace docs import-md ./docs/mydoc/doc.md 1.2
 
 # Sheets
 gworkspace sheets read
@@ -37,7 +50,8 @@ gworkspace sheets update "BOM!A2:D2" "Val1|Val2|Val3|Val4"
 
 # Gmail
 gworkspace gmail list 10
-gworkspace gmail send "user@example.com" "Subject" "Message body"
+gworkspace gmail draft "user@example.com" "Subject" "Message body"
+gworkspace gmail send --approve-send "user@example.com" "Subject" "Message body"
 ```
 
 ### Local Development
