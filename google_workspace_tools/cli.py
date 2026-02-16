@@ -33,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     sheets_parser.add_argument("--sheet-id", default=DEFAULT_SHEET_ID)
 
     gmail_parser = subparsers.add_parser("gmail", help="Gmail operations")
-    gmail_parser.add_argument("command", choices=["list", "get", "body"])
+    gmail_parser.add_argument("command", choices=["list", "get", "body", "send"])
     gmail_parser.add_argument("args", nargs="*")
 
     return parser

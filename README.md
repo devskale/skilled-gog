@@ -18,7 +18,7 @@ curl -fsSL https://raw.githubusercontent.com/devskale/skilled-gog/main/install.s
 
 - **Google Docs**: `structure`, `append`, `insert`, `replace`, `paragraph`, `bold`, `tabs`
 - **Google Sheets**: `read`, `update`, `append`, `clear`, `batch`
-- **Gmail**: `list`, `get`, `body`
+- **Gmail**: `list`, `get`, `body`, `send`
 - Shared OAuth2 credential flow across all services
 
 ## Usage
@@ -37,6 +37,7 @@ gworkspace sheets update "BOM!A2:D2" "Val1|Val2|Val3|Val4"
 
 # Gmail
 gworkspace gmail list 10
+gworkspace gmail send "user@example.com" "Subject" "Message body"
 ```
 
 ### Local Development

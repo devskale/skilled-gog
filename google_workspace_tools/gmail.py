@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import base64
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from .auth import AuthError, get_credentials
 
-SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+SCOPES = [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.send",
+]
 
 
 def _service():
@@ -74,6 +79,27 @@ def print_header(message: dict) -> None:
     print("=" * 80)
 
 
+def create_message(to: str, subject: str, body: str, cc: str | None = None, bcc: str | None = None) -> dict:
+    """Create a message for sending."""
+    msg = MIMEText(body)
+    msg["to"] = to
+    msg["subject"] = subject
+    if cc:
+        msg["cc"] = cc
+    if bcc:
+        msg["bcc"] = bcc
+
+    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+    return {"raw": raw}
+
+
+def send_message(to: str, subject: str, body: str, cc: str | None = None, bcc: str | None = None) -> dict:
+    """Send an email message."""
+    message = create_message(to, subject, body, cc, bcc)
+    result = _service().users().messages().send(userId="me", body=message).execute()
+    return result
+
+
 def run_command(command: str, args: list[str]) -> int:
     try:
         if command == "list":
@@ -99,6 +125,21 @@ def run_command(command: str, args: list[str]) -> int:
         if command == "body":
             message = get_message(args[0], fmt="full")
             print(get_message_body(message))
+            return 0
+
+        if command == "send":
+            if len(args) < 3:
+                print("Error: send requires to, subject, body")
+                print("Usage: gworkspace gmail send <to> <subject> <body>")
+                return 2
+            to = args[0]
+            subject = args[1]
+            body = args[2]
+            cc = args[3] if len(args) > 3 else None
+            result = send_message(to, subject, body, cc)
+            print(f"Message sent: {result.get('id', 'unknown')}")
+            print(f"  To: {to}")
+            print(f"  Subject: {subject}")
             return 0
 
         print(f"Unknown gmail command: {command}")

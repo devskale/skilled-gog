@@ -11,8 +11,15 @@ if [[ "$command" == "open" ]]; then
 fi
 
 if [[ "$command" == "help" || "$command" == "-h" || "$command" == "--help" ]]; then
-    echo "Gmail API Reader"
-    echo "Usage: $0 <list|get|body|open> [args...]"
+    echo "Gmail API Tool"
+    echo "Usage: $0 <list|get|body|send|open> [args...]"
+    echo ""
+    echo "Commands:"
+    echo "  list [max] [query]     - List messages"
+    echo "  get <message_id>       - Get full message"
+    echo "  body <message_id>      - Get message body only"
+    echo "  send <to> <subj> <msg> - Send email"
+    echo "  open                   - Open Gmail in browser"
     exit 0
 fi
 

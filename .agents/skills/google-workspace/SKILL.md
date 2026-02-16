@@ -1,6 +1,6 @@
 ---
 name: google-workspace
-description: Operate Google Docs, Google Sheets, and Gmail from this workspace using OAuth and uv. Use for reading/editing docs and sheets, and reading mail.
+description: Operate Google Docs, Google Sheets, and Gmail from this workspace using OAuth and uv. Use for reading/editing docs and sheets, reading and sending mail.
 ---
 
 # Google Workspace Skill
@@ -90,6 +90,7 @@ gworkspace sheets batch update.json
 gworkspace gmail list 10
 gworkspace gmail get <message_id>
 gworkspace gmail body <message_id>
+gworkspace gmail send "user@example.com" "Subject" "Message body"
 ```
 
 ## Google Docs Tabs
