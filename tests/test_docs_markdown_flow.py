@@ -1,8 +1,12 @@
+import base64
 from pathlib import Path
+
+import pytest
 
 from google_workspace_tools.docs import (
     _build_app_properties,
     _build_visible_header,
+    _encode_image_for_data_uri,
     _embed_local_images,
     _extract_data_images,
     _render_tabs_markdown,
@@ -39,6 +43,22 @@ def test_embed_local_images_to_data_uri(tmp_path: Path):
     text = "Look ![x](img/a.png)"
     converted = _embed_local_images(text, md_file)
     assert "data:image/png;base64," in converted
+
+
+def test_encode_image_for_data_uri_downscales_wide_image(tmp_path: Path):
+    pil = pytest.importorskip("PIL.Image")
+    image_path = tmp_path / "wide.png"
+    img = pil.new("RGB", (2000, 1000), "white")
+    img.save(image_path, format="PNG")
+
+    mime_type, b64 = _encode_image_for_data_uri(image_path, 580)
+    assert mime_type == "image/png"
+
+    data = base64.b64decode(b64)
+    resized_path = tmp_path / "resized.png"
+    resized_path.write_bytes(data)
+    with pil.open(resized_path) as resized:
+        assert resized.width == 580
 
 
 def test_build_app_properties_from_frontmatter(tmp_path: Path):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 from datetime import datetime, timezone
+from io import BytesIO
 import mimetypes
 from pathlib import Path
 import re
@@ -13,11 +14,19 @@ from googleapiclient.http import MediaInMemoryUpload
 
 from .auth import AuthError, get_credentials
 
+try:
+    from PIL import Image
+    from PIL import UnidentifiedImageError
+except ImportError:
+    Image = None  # type: ignore[assignment]
+    UnidentifiedImageError = OSError  # type: ignore[assignment]
+
 DOC_SCOPES = [
     "https://www.googleapis.com/auth/documents",
 ]
 DRIVE_READ_SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 DRIVE_WRITE_SCOPES = ["https://www.googleapis.com/auth/drive"]
+DEFAULT_MAX_IMAGE_WIDTH_PX = 580
 
 
 def _service():
@@ -356,7 +365,53 @@ def _extract_data_images(markdown_text: str, img_dir: Path) -> tuple[str, int]:
     return markdown_text, len(key_to_file)
 
 
-def _embed_local_images(markdown_text: str, markdown_path: Path) -> str:
+def _encode_image_for_data_uri(image_path: Path, max_width_px: int) -> tuple[str, str]:
+    mime_type, _ = mimetypes.guess_type(str(image_path))
+    mime_type = mime_type or "application/octet-stream"
+    payload = image_path.read_bytes()
+
+    if (
+        max_width_px > 0
+        and Image is not None
+        and mime_type.startswith("image/")
+        and mime_type != "image/svg+xml"
+    ):
+        try:
+            with Image.open(image_path) as img:
+                width, height = img.size
+                if width > max_width_px:
+                    new_height = max(1, int(height * (max_width_px / width)))
+                    resampling = getattr(Image, "Resampling", Image).LANCZOS
+                    resized = img.resize((max_width_px, new_height), resampling)
+                    fmt = (img.format or "").upper()
+                    if fmt == "JPG":
+                        fmt = "JPEG"
+                    if fmt not in {"PNG", "JPEG", "WEBP", "GIF"}:
+                        fmt = "PNG"
+
+                    out = BytesIO()
+                    save_img = resized
+                    if fmt == "JPEG" and resized.mode in {"RGBA", "LA", "P"}:
+                        save_img = resized.convert("RGB")
+                    save_img.save(out, format=fmt)
+                    payload = out.getvalue()
+
+                    if fmt == "PNG":
+                        mime_type = "image/png"
+                    elif fmt == "JPEG":
+                        mime_type = "image/jpeg"
+                    elif fmt == "WEBP":
+                        mime_type = "image/webp"
+                    elif fmt == "GIF":
+                        mime_type = "image/gif"
+        except (UnidentifiedImageError, OSError):
+            pass
+
+    encoded = base64.b64encode(payload).decode("ascii")
+    return mime_type, encoded
+
+
+def _embed_local_images(markdown_text: str, markdown_path: Path, max_width_px: int = DEFAULT_MAX_IMAGE_WIDTH_PX) -> str:
     pattern = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
 
     def replacer(match: re.Match[str]) -> str:
@@ -367,9 +422,7 @@ def _embed_local_images(markdown_text: str, markdown_path: Path) -> str:
         image_path = (markdown_path.parent / img_ref).resolve()
         if not image_path.exists() or not image_path.is_file():
             return match.group(0)
-        mime_type, _ = mimetypes.guess_type(str(image_path))
-        mime_type = mime_type or "application/octet-stream"
-        encoded = base64.b64encode(image_path.read_bytes()).decode("ascii")
+        mime_type, encoded = _encode_image_for_data_uri(image_path, max_width_px)
         return f"![{alt}](data:{mime_type};base64,{encoded})"
 
     return pattern.sub(replacer, markdown_text)
@@ -582,7 +635,15 @@ def import_markdown(markdown_file: str, version: str) -> dict:
 
     full_text = path.read_text(encoding="utf-8")
     metadata, body = _split_frontmatter(full_text)
-    body = _build_visible_header(metadata, version, path) + _embed_local_images(body, path)
+    max_image_width_px = DEFAULT_MAX_IMAGE_WIDTH_PX
+    raw_max_width = metadata.get("max_image_width_px", "").strip()
+    if raw_max_width:
+        try:
+            max_image_width_px = max(1, int(raw_max_width))
+        except ValueError:
+            max_image_width_px = DEFAULT_MAX_IMAGE_WIDTH_PX
+
+    body = _build_visible_header(metadata, version, path) + _embed_local_images(body, path, max_image_width_px)
 
     source_title = metadata.get("title") or path.stem
     source_title = re.sub(r"_V\d+(\.\d+)?$", "", source_title)
@@ -612,6 +673,10 @@ def import_markdown(markdown_file: str, version: str) -> dict:
     print(f"OK: uploaded markdown as Google Doc {created.get('name', '')}")
     print(f"   id: {created.get('id', '')}")
     print(f"   link: {created.get('webViewLink', '')}")
+    if Image is None:
+        print("INFO: Pillow not installed; local images embedded without width downscaling.")
+    else:
+        print(f"INFO: local images embedded with max width {max_image_width_px}px before upload.")
     print("INFO: markdown upload creates a single-body Google Doc (tab structure is not restored).")
     return created
 

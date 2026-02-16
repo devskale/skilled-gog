@@ -143,12 +143,14 @@ Use this for extensive edits instead of many API mutations.
 gworkspace docs --doc-id "<doc_id>" download "/tmp/gdoc_export_test" 1.0
 ```
 
-What export does:
+What download does:
 - Downloads as Markdown
-- Merges all tabs recursively into one `doc.md`
+- Merges all tabs recursively into one markdown file
 - Converts every tab boundary to a top-level `#` heading in `doc.md`
 - Adds YAML frontmatter (`doc_id`, `doc_url`, `drive_parent_id`, `version`, etc.)
 - Stores images in relative `img/`
+- Default filename is `<slug>.md` when no output dir is provided
+- If an explicit output dir is provided, filename is `doc.md`
 
 Output structure:
 
@@ -171,7 +173,7 @@ ls -la /tmp/gdoc_export_test/img
 ### Local Edit + Upload New Version
 
 ```bash
-# edit /tmp/gdoc_export_test/doc.md locally
+# edit markdown locally (default export: /docs/<slug>/<slug>.md)
 gworkspace docs upload "/tmp/gdoc_export_test/doc.md" 1.2
 ```
 
@@ -180,6 +182,8 @@ Import behavior:
 - Writes metadata to Drive `appProperties`
 - Adds visible import header in the doc for human traceability
 - Upload does not recreate Google Docs tabs (single-body doc upload)
+- Upload scales local images to max 580px width by default
+- Optional frontmatter override: `max_image_width_px: 580`
 
 ## Google Docs Tabs
 

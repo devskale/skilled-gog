@@ -46,6 +46,7 @@ gworkspace docs upload ./docs/mydoc/doc.md 1.2
 
 # Note: tabbed docs are flattened on download (tab boundaries become `#` H1 headings).
 # Upload creates a single-body Google Doc and does not recreate tab structure.
+# Upload scales local images to max 580px width by default (set `max_image_width_px` in frontmatter to override).
 
 # Sheets
 gworkspace sheets read
