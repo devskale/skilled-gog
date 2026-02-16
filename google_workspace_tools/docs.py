@@ -18,7 +18,9 @@ def _service():
     return build("docs", "v1", credentials=creds)
 
 
-def get_document(doc_id: str) -> dict:
+def get_document(doc_id: str, include_tabs_content: bool = False) -> dict:
+    if include_tabs_content:
+        return _service().documents().get(documentId=doc_id, includeTabsContent=True).execute()
     return _service().documents().get(documentId=doc_id).execute()
 
 
@@ -179,6 +181,83 @@ def make_bold(doc_id: str, start_text: str, end_text: str | None = None) -> None
     _batch_update(doc_id, requests)
 
 
+def list_tabs(doc_id: str) -> list[dict]:
+    """List all tabs in the document including nested child tabs."""
+    doc = get_document(doc_id, include_tabs_content=True)
+    tabs = doc.get("tabs", [])
+
+    if not tabs:
+        print("No tabs found (document may not have tabs enabled)")
+        return []
+
+    all_tabs = []
+
+    def collect_tabs(tab_list: list[dict], indent: int = 0) -> None:
+        for tab in tab_list:
+            props = tab.get("tabProperties", {})
+            all_tabs.append({
+                "tabId": props.get("tabId", "N/A"),
+                "title": props.get("title", "Untitled"),
+                "type": "documentTab" if "documentTab" in tab else "other",
+                "indent": indent
+            })
+            # Recursively collect child tabs
+            if "childTabs" in tab:
+                collect_tabs(tab["childTabs"], indent + 1)
+
+    collect_tabs(tabs)
+    return all_tabs
+
+
+def print_tabs(doc_id: str) -> None:
+    """Print all tabs in a formatted table."""
+    tabs = list_tabs(doc_id)
+
+    if not tabs:
+        return
+
+    print(f"\nTabs ({len(tabs)} total):")
+    print("-" * 80)
+    print(f"{'Tab ID':<20} {'Title':<40} {'Type':<15}")
+    print("-" * 80)
+
+    for tab in tabs:
+        indent = "  " * tab["indent"]
+        print(f"{indent}{tab['tabId']:<20} {tab['title']:<40} {tab['type']:<15}")
+
+
+def create_tab(doc_id: str, title: str, parent_tab_id: str | None = None, index: int | None = None) -> None:
+    """Create a new tab in the document."""
+    from typing import Any
+    tab_props: dict[str, Any] = {"title": title}
+    if parent_tab_id:
+        tab_props["parentTabId"] = parent_tab_id
+    if index is not None:
+        tab_props["index"] = index
+
+    requests = [{"createTab": {"tabProperties": tab_props}}]
+    _batch_update(doc_id, requests)
+
+
+def delete_tab(doc_id: str, tab_id: str) -> None:
+    """Delete a tab from the document."""
+    requests = [{"deleteTab": {"tabId": tab_id}}]
+    _batch_update(doc_id, requests)
+
+
+def rename_tab(doc_id: str, tab_id: str, new_title: str) -> None:
+    """Rename a tab."""
+    requests = [
+        {
+            "updateTabProperties": {
+                "tabProperties": {"tabId": tab_id, "title": new_title},
+                "fields": "title"
+            }
+        }
+    ]
+    _batch_update(doc_id, requests)
+
+
 def run_command(command: str, doc_id: str, args: list[str]) -> int:
     try:
         if command == "recent":
@@ -201,6 +280,37 @@ def run_command(command: str, doc_id: str, args: list[str]) -> int:
         elif command == "bold":
             make_bold(doc_id, args[0], args[1] if len(args) > 1 else None)
             print("OK: bold applied")
+        elif command == "tabs":
+            if not args:
+                print("Error: tabs command requires a subcommand (list, create, delete, rename)")
+                return 2
+            subcommand = args[0]
+            if subcommand == "list":
+                print_tabs(doc_id)
+                print("OK: tabs listed")
+            elif subcommand == "create":
+                if len(args) < 2:
+                    print("Error: tabs create requires a title")
+                    return 2
+                title = args[1]
+                parent_id = args[2] if len(args) > 2 else None
+                create_tab(doc_id, title, parent_id)
+                print(f"OK: tab '{title}' created")
+            elif subcommand == "delete":
+                if len(args) < 2:
+                    print("Error: tabs delete requires a tab_id")
+                    return 2
+                delete_tab(doc_id, args[1])
+                print(f"OK: tab {args[1]} deleted")
+            elif subcommand == "rename":
+                if len(args) < 3:
+                    print("Error: tabs rename requires tab_id and new title")
+                    return 2
+                rename_tab(doc_id, args[1], args[2])
+                print(f"OK: tab renamed to '{args[2]}'")
+            else:
+                print(f"Unknown tabs subcommand: {subcommand}")
+                return 2
         else:
             print(f"Unknown docs command: {command}")
             return 2

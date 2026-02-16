@@ -21,10 +21,11 @@ def build_parser() -> argparse.ArgumentParser:
     docs_parser = subparsers.add_parser("docs", help="Google Docs operations")
     docs_parser.add_argument(
         "command",
-        choices=["recent", "structure", "append", "insert", "replace", "paragraph", "bold"],
+        choices=["recent", "structure", "append", "insert", "replace", "paragraph", "bold", "tabs"],
     )
     docs_parser.add_argument("args", nargs="*")
     docs_parser.add_argument("--doc-id", default=DEFAULT_DOC_ID)
+    docs_parser.add_argument("--tab", help="Target specific tab ID")
 
     sheets_parser = subparsers.add_parser("sheets", help="Google Sheets operations")
     sheets_parser.add_argument("command", choices=["read", "update", "append", "clear", "batch"])

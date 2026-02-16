@@ -333,21 +333,297 @@ def copy_document(doc_id, new_name=None):
         print(f"[ERR] Error: {e}")
         return None
 
+
+def insert_document(doc_id, folder_id):
+    """Move/insert a document into a folder"""
+    try:
+        creds = get_credentials()
+        if not creds:
+            return False
+
+        drive_service = build('drive', 'v3', credentials=creds)
+
+        # Get current parents
+        file = drive_service.files().get(fileId=doc_id, fields='parents, name').execute()
+        previous_parents = ','.join(file.get('parents', []))
+        doc_name = file.get('name', 'Unknown')
+
+        # Move to new folder
+        drive_service.files().update(
+            fileId=doc_id,
+            addParents=folder_id,
+            removeParents=previous_parents,
+            fields='id, parents'
+        ).execute()
+
+        print(f"[OK] Document moved to folder")
+        print(f"  Document: {doc_name}")
+        print(f"  Folder ID: {folder_id}")
+        return True
+    except HttpError as e:
+        print(f"[ERR] Error: {e}")
+        return False
+
+
+def rename_document(doc_id, new_name):
+    """Rename a document"""
+    try:
+        creds = get_credentials()
+        if not creds:
+            return False
+
+        drive_service = build('drive', 'v3', credentials=creds)
+
+        # Get old name
+        file = drive_service.files().get(fileId=doc_id, fields='name').execute()
+        old_name = file.get('name', 'Unknown')
+
+        # Rename
+        drive_service.files().update(
+            fileId=doc_id,
+            body={'name': new_name},
+            fields='name'
+        ).execute()
+
+        print(f"[OK] Document renamed")
+        print(f"  Old name: {old_name}")
+        print(f"  New name: {new_name}")
+        return True
+    except HttpError as e:
+        print(f"[ERR] Error: {e}")
+        return False
+
+
+def delete_document(doc_id):
+    """Move a document to trash (soft delete)"""
+    try:
+        creds = get_credentials()
+        if not creds:
+            return False
+
+        drive_service = build('drive', 'v3', credentials=creds)
+
+        # Get document name before deleting
+        file = drive_service.files().get(fileId=doc_id, fields='name').execute()
+        doc_name = file.get('name', 'Unknown')
+
+        # Move to trash
+        drive_service.files().update(
+            fileId=doc_id,
+            body={'trashed': True},
+            fields='id, trashed'
+        ).execute()
+
+        print(f"[OK] Document moved to trash")
+        print(f"  Name: {doc_name}")
+        print(f"  ID: {doc_id}")
+        print(f"  Restore: Use Google Drive Trash to restore")
+        return True
+    except HttpError as e:
+        print(f"[ERR] Error: {e}")
+        return False
+
+
+# ============================================================================
+# Tab Functions
+# ============================================================================
+
+def list_tabs(doc_id):
+    """List all tabs in a document"""
+    try:
+        creds = get_credentials()
+        if not creds:
+            return None
+
+        service = build('docs', 'v1', credentials=creds)
+        doc = service.documents().get(documentId=doc_id, includeTabsContent=True).execute()
+
+        tabs = doc.get('tabs', [])
+        doc_title = doc.get('title', 'Untitled')
+
+        print(f"[OK] Tabs in document: {doc_title}")
+        if not tabs:
+            print("  No tabs found (document uses single tab)")
+            return []
+
+        for i, tab in enumerate(tabs):
+            tab_props = tab.get('tabProperties', {})
+            tab_id = tab_props.get('tabId', 'unknown')
+            tab_title = tab_props.get('title', 'Untitled')
+            parent = tab_props.get('parentTabId', None)
+            indent = "  " if parent else ""
+            print(f"{indent}  [{i}] {tab_title} (ID: {tab_id})")
+
+        return tabs
+    except HttpError as e:
+        print(f"[ERR] Error: {e}")
+        return None
+
+
+def create_tab(doc_id, title, parent_tab_id=None, index=None):
+    """Create a new tab in the document"""
+    try:
+        creds = get_credentials()
+        if not creds:
+            return False
+
+        service = build('docs', 'v1', credentials=creds)
+
+        # Build createTab request
+        tab_properties = {'title': title}
+        if parent_tab_id:
+            tab_properties['parentTabId'] = parent_tab_id
+        if index is not None:
+            tab_properties['index'] = index
+
+        requests = [
+            {
+                'addDocumentTab': {
+                    'tabProperties': tab_properties
+                }
+            }
+        ]
+
+        result = service.documents().batchUpdate(
+            documentId=doc_id,
+            body={'requests': requests}
+        ).execute()
+
+        # Get the new tab ID from the response
+        replies = result.get('replies', [])
+        if replies and 'addDocumentTab' in replies[0]:
+            new_tab_id = replies[0]['addDocumentTab'].get('tabId', 'unknown')
+            print(f"[OK] Tab created successfully")
+            print(f"  Title: {title}")
+            print(f"  Tab ID: {new_tab_id}")
+            return new_tab_id
+        else:
+            print(f"[OK] Tab created: {title}")
+            return True
+
+    except HttpError as e:
+        print(f"[ERR] Error: {e}")
+        return False
+
+
+def delete_tab(doc_id, tab_id):
+    """Delete a tab from the document"""
+    try:
+        creds = get_credentials()
+        if not creds:
+            return False
+
+        service = build('docs', 'v1', credentials=creds)
+
+        requests = [
+            {
+                'deleteTab': {
+                    'tabId': tab_id
+                }
+            }
+        ]
+
+        service.documents().batchUpdate(
+            documentId=doc_id,
+            body={'requests': requests}
+        ).execute()
+
+        print(f"[OK] Tab deleted")
+        print(f"  Tab ID: {tab_id}")
+        return True
+
+    except HttpError as e:
+        print(f"[ERR] Error: {e}")
+        return False
+
+
+def rename_tab(doc_id, tab_id, new_title):
+    """Rename a tab in the document"""
+    try:
+        creds = get_credentials()
+        if not creds:
+            return False
+
+        service = build('docs', 'v1', credentials=creds)
+
+        requests = [
+            {
+                'updateDocumentTabProperties': {
+                    'tabProperties': {
+                        'tabId': tab_id,
+                        'title': new_title
+                    },
+                    'fields': 'title'
+                }
+            }
+        ]
+
+        service.documents().batchUpdate(
+            documentId=doc_id,
+            body={'requests': requests}
+        ).execute()
+
+        print(f"[OK] Tab renamed successfully")
+        print(f"  Tab ID: {tab_id}")
+        print(f"  New Title: {new_title}")
+        return True
+
+    except HttpError as e:
+        print(f"[ERR] Error: {e}")
+        return False
+
+
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         print("Usage: python3 gdocs_edit.py <command> <doc_id> [args...]")
         print("\nCommands:")
         print("  append <doc_id> <text>          - Append text to document")
         print("  insert <doc_id> <after> <text>  - Insert text after specified text")
-        print("  replace <doc_id> <old> <new>   - Replace text")
+        print("  replace <doc_id> <old> <new>    - Replace text")
         print("  paragraph <doc_id> <text>       - Add new paragraph")
-        print("  bold <doc_id> <text>           - Make text bold")
+        print("  bold <doc_id> <text>            - Make text bold")
         print("  structure <doc_id>              - Show document structure")
-        print("  copy <doc_id> [name]            - Copy document (WORK-Kopie)")
+        print("\nDrive Commands (document management):")
+        print("  copy <doc_id> [name]            - Copy document (default: - WORK-Kopie)")
+        print("  rename <doc_id> <new_name>      - Rename document")
+        print("  move <doc_id> <folder_id>       - Move document to folder")
+        print("  delete <doc_id>                 - Move document to trash")
+        print("\nTab Commands:")
+        print("  tabs-list <doc_id>              - List all tabs")
+        print("  tabs-create <doc_id> <title>    - Create new tab")
+        print("  tabs-delete <doc_id> <tab_id>   - Delete tab")
+        print("  tabs-rename <doc_id> <tab_id> <title> - Rename tab")
         print("\nYour doc ID: 1kJG9gFMy4M2iHfdxOhQ_KfNh1oy1P4aOdsDB-9626eg")
         sys.exit(1)
 
     command = sys.argv[1]
+
+    # Commands without doc_id
+    if command in ['help', '--help', '-h']:
+        print("Usage: python3 gdocs_edit.py <command> <doc_id> [args...]")
+        print("\nCommands:")
+        print("  append <doc_id> <text>          - Append text to document")
+        print("  insert <doc_id> <after> <text>  - Insert text after specified text")
+        print("  replace <doc_id> <old> <new>    - Replace text")
+        print("  paragraph <doc_id> <text>       - Add new paragraph")
+        print("  bold <doc_id> <text>            - Make text bold")
+        print("  structure <doc_id>              - Show document structure")
+        print("\nDrive Commands (document management):")
+        print("  copy <doc_id> [name]            - Copy document (default: - WORK-Kopie)")
+        print("  rename <doc_id> <new_name>      - Rename document")
+        print("  move <doc_id> <folder_id>       - Move document to folder")
+        print("  delete <doc_id>                 - Move document to trash")
+        print("\nTab Commands:")
+        print("  tabs-list <doc_id>              - List all tabs")
+        print("  tabs-create <doc_id> <title>    - Create new tab")
+        print("  tabs-delete <doc_id> <tab_id>   - Delete tab")
+        print("  tabs-rename <doc_id> <tab_id> <title> - Rename tab")
+        sys.exit(0)
+
+    if len(sys.argv) < 3:
+        print("[ERR] Error: doc_id required")
+        sys.exit(1)
+
     doc_id = sys.argv[2]
 
     if command == 'append':
@@ -380,6 +656,41 @@ if __name__ == '__main__':
     elif command == 'copy':
         new_name = sys.argv[3] if len(sys.argv) > 3 else None
         copy_document(doc_id, new_name)
+    elif command == 'rename':
+        if len(sys.argv) < 4:
+            print("[ERR] Error: rename command requires new_name")
+            sys.exit(1)
+        new_name = sys.argv[3]
+        rename_document(doc_id, new_name)
+    elif command == 'move':
+        if len(sys.argv) < 4:
+            print("[ERR] Error: move command requires folder_id")
+            sys.exit(1)
+        folder_id = sys.argv[3]
+        insert_document(doc_id, folder_id)
+    elif command == 'delete':
+        delete_document(doc_id)
+    elif command == 'tabs-list':
+        list_tabs(doc_id)
+    elif command == 'tabs-create':
+        if len(sys.argv) < 4:
+            print("[ERR] Error: tabs-create requires title")
+            sys.exit(1)
+        title = sys.argv[3]
+        create_tab(doc_id, title)
+    elif command == 'tabs-delete':
+        if len(sys.argv) < 4:
+            print("[ERR] Error: tabs-delete requires tab_id")
+            sys.exit(1)
+        tab_id = sys.argv[3]
+        delete_tab(doc_id, tab_id)
+    elif command == 'tabs-rename':
+        if len(sys.argv) < 5:
+            print("[ERR] Error: tabs-rename requires tab_id and new_title")
+            sys.exit(1)
+        tab_id = sys.argv[3]
+        new_title = sys.argv[4]
+        rename_tab(doc_id, tab_id, new_title)
     else:
         print(f"[ERR] Unknown command: {command}")
         sys.exit(1)
