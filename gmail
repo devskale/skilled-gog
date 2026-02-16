@@ -12,7 +12,9 @@ fi
 
 if [[ "$command" == "help" || "$command" == "-h" || "$command" == "--help" ]]; then
     echo "Gmail API Reader"
-    echo "Usage: $0 <list|get|body|open> [args...]"
+    echo "Usage: $0 <list|get|body|draft|send|open> [args...]"
+    echo "Draft: $0 draft <to> <subject> <body...>"
+    echo "Send:  $0 send --approve-send <to> <subject> <body...>"
     exit 0
 fi
 

@@ -1,6 +1,6 @@
 ---
 name: google-workspace
-description: Operate Google Docs, Google Sheets, and Gmail from this workspace using OAuth and uv. Use for reading/editing docs and sheets, and reading mail.
+description: Operate Google Docs, Google Sheets, and Gmail from this workspace using OAuth and uv. Use for reading/editing docs and sheets, and reading/drafting/sending mail.
 ---
 
 # Google Workspace Skill
@@ -31,10 +31,24 @@ cd /Users/johannwaldherr/code/google
 uv sync
 ```
 
-Authenticate by running any command once:
+Authenticate by running a command for each service you use:
 
 ```bash
 ./gdocs structure
+./gsheets read
+./gmail list 1
+```
+
+Important:
+- This project uses one shared `token.json`.
+- Docs, Sheets, and Gmail require different OAuth scopes.
+- If you switch services and see `insufficient authentication scopes` or `invalid_scope`, re-authenticate:
+
+```bash
+cd /Users/johannwaldherr/code/google
+rm -f token.json
+# then run the service command again, e.g.
+./gmail list 1
 ```
 
 ## Commands
@@ -61,8 +75,11 @@ uv run gworkspace sheets batch update.json
 
 # Gmail
 uv run gworkspace gmail list 10
+uv run gworkspace gmail list 20 "from:wibke"
 uv run gworkspace gmail get <message_id>
 uv run gworkspace gmail body <message_id>
+uv run gworkspace gmail draft "alice@example.com" "Subject" "Body text"
+uv run gworkspace gmail send --approve-send "alice@example.com" "Subject" "Body text"
 ```
 
 ### Wrappers (same behavior)
@@ -72,6 +89,9 @@ uv run gworkspace gmail body <message_id>
 ./gdocs structure
 ./gsheets read
 ./gmail list
+./gmail list 20 "from:wibke"
+./gmail draft "alice@example.com" "Subject" "Body text"
+./gmail send --approve-send "alice@example.com" "Subject" "Body text"
 ```
 
 Use custom sheet id with wrapper:
@@ -103,3 +123,5 @@ https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?pro
 
 - `token.json` and `client_secrets.json` are local secret files.
 - The project uses `uv`; avoid `pip`/`python` direct workflows.
+- AI-created emails (draft/send) always append footer: `gesendet von KI, iA`.
+- Sending policy: use `send` only after explicit user approval; command requires `--approve-send`.

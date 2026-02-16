@@ -32,20 +32,24 @@ def build_parser() -> argparse.ArgumentParser:
     sheets_parser.add_argument("--sheet-id", default=DEFAULT_SHEET_ID)
 
     gmail_parser = subparsers.add_parser("gmail", help="Gmail operations")
-    gmail_parser.add_argument("command", choices=["list", "get", "body"])
+    gmail_parser.add_argument("command", choices=["list", "get", "body", "draft", "send"])
     gmail_parser.add_argument("args", nargs="*")
 
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args, unknown = parser.parse_known_args(argv)
 
     if args.service == "docs":
         return run_docs(args.command, args.doc_id, args.args)
     if args.service == "sheets":
         return run_sheets(args.command, args.sheet_id, args.args)
     if args.service == "gmail":
+        # Allow gmail subcommands to consume pass-through flags like --approve-send.
+        if unknown:
+            args.args.extend(unknown)
         return run_gmail(args.command, args.args)
 
     print("Unknown service")
