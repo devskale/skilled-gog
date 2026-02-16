@@ -6,6 +6,12 @@ No intermediate formats needed - works directly with Google Docs structure
 
 import os
 import sys
+
+# Fix Windows encoding issues
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -276,49 +282,159 @@ def make_bold(doc_id, start_text, end_text=None):
         print(f"❌ Error: {e}")
         return False
 
+def add_table(doc_id, rows, cols, data=None, at_end=True, after_text=None):
+    """Add a table to the document"""
+    try:
+        creds = get_credentials()
+        if not creds:
+            return False
+
+        service = build('docs', 'v1', credentials=creds)
+        doc = service.documents().get(documentId=doc_id).execute()
+
+        # Find insert position
+        if after_text:
+            index = find_text_index(doc, after_text)
+            if index is None:
+                print(f"❌ Text '{after_text}' not found")
+                return False
+            insert_index = index + len(after_text)
+        else:
+            # Insert at end
+            content = doc.get('body', {}).get('content', [])
+            insert_index = content[-1].get('endIndex', 1) - 1
+
+        requests = [
+            {
+                'insertTable': {
+                    'rows': rows,
+                    'columns': cols,
+                    'location': {'index': insert_index}
+                }
+            }
+        ]
+
+        result = service.documents().batchUpdate(
+            documentId=doc_id,
+            body={'requests': requests}
+        ).execute()
+
+        print(f"✓ Added {rows}x{cols} table")
+        return True
+    except HttpError as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def delete_range(doc_id, start_index, end_index):
+    """Delete content in a range"""
+    try:
+        creds = get_credentials()
+        if not creds:
+            return False
+
+        service = build('docs', 'v1', credentials=creds)
+
+        requests = [
+            {
+                'deleteContentRange': {
+                    'range': {
+                        'startIndex': start_index,
+                        'endIndex': end_index
+                    }
+                }
+            }
+        ]
+
+        service.documents().batchUpdate(
+            documentId=doc_id,
+            body={'requests': requests}
+        ).execute()
+
+        print(f"✓ Deleted range {start_index}-{end_index}")
+        return True
+    except HttpError as e:
+        print(f"❌ Error: {e}")
+        return False
+
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         print("Usage: python3 gdocs_edit.py <command> <doc_id> [args...]")
         print("\nCommands:")
+        print("  structure <doc_id>              - Show document structure")
         print("  append <doc_id> <text>          - Append text to document")
         print("  insert <doc_id> <after> <text>  - Insert text after specified text")
-        print("  replace <doc_id> <old> <new>   - Replace text")
+        print("  replace <doc_id> <old> <new>    - Replace text")
         print("  paragraph <doc_id> <text>       - Add new paragraph")
-        print("  bold <doc_id> <text>           - Make text bold")
-        print("  structure <doc_id>              - Show document structure")
+        print("  bold <doc_id> <text>            - Make text bold")
+        print("  table <doc_id> <rows> <cols> [after] - Add table (optionally after text)")
+        print("  delete <doc_id> <start> <end>   - Delete content range")
         print("\nYour doc ID: 1kJG9gFMy4M2iHfdxOhQ_KfNh1oy1P4aOdsDB-9626eg")
         sys.exit(1)
-    
+
     command = sys.argv[1]
-    doc_id = sys.argv[2]
-    
-    if command == 'append':
-        text = sys.argv[3] if len(sys.argv) > 3 else ''
+
+    if command == 'structure':
+        if len(sys.argv) < 3:
+            print("❌ Error: structure requires doc_id")
+            sys.exit(1)
+        doc_id = sys.argv[2]
+        doc = get_document(doc_id)
+        if doc:
+            print_document_structure(doc)
+    elif command == 'append':
+        if len(sys.argv) < 4:
+            print("❌ Error: append requires doc_id and text")
+            sys.exit(1)
+        doc_id = sys.argv[2]
+        text = sys.argv[3]
         append_text(doc_id, text)
     elif command == 'insert':
         if len(sys.argv) < 5:
-            print("❌ Error: insert command requires after_text and new_text")
+            print("❌ Error: insert requires doc_id, after_text and new_text")
             sys.exit(1)
+        doc_id = sys.argv[2]
         after_text = sys.argv[3]
         new_text = sys.argv[4]
         insert_after_text(doc_id, after_text, new_text)
     elif command == 'replace':
         if len(sys.argv) < 5:
-            print("❌ Error: replace command requires old_text and new_text")
+            print("❌ Error: replace requires doc_id, old_text and new_text")
             sys.exit(1)
+        doc_id = sys.argv[2]
         old_text = sys.argv[3]
         new_text = sys.argv[4]
         replace_text(doc_id, old_text, new_text)
     elif command == 'paragraph':
-        text = sys.argv[3] if len(sys.argv) > 3 else ''
+        if len(sys.argv) < 4:
+            print("❌ Error: paragraph requires doc_id and text")
+            sys.exit(1)
+        doc_id = sys.argv[2]
+        text = sys.argv[3]
         add_paragraph(doc_id, text)
     elif command == 'bold':
-        text = sys.argv[3] if len(sys.argv) > 3 else ''
+        if len(sys.argv) < 4:
+            print("❌ Error: bold requires doc_id and text")
+            sys.exit(1)
+        doc_id = sys.argv[2]
+        text = sys.argv[3]
         make_bold(doc_id, text)
-    elif command == 'structure':
-        doc = get_document(doc_id)
-        if doc:
-            print_document_structure(doc)
+    elif command == 'table':
+        if len(sys.argv) < 5:
+            print("❌ Error: table requires doc_id, rows and cols")
+            sys.exit(1)
+        doc_id = sys.argv[2]
+        rows = int(sys.argv[3])
+        cols = int(sys.argv[4])
+        after_text = sys.argv[5] if len(sys.argv) > 5 else None
+        add_table(doc_id, rows, cols, after_text=after_text)
+    elif command == 'delete':
+        if len(sys.argv) < 5:
+            print("❌ Error: delete requires doc_id, start_index and end_index")
+            sys.exit(1)
+        doc_id = sys.argv[2]
+        start_index = int(sys.argv[3])
+        end_index = int(sys.argv[4])
+        delete_range(doc_id, start_index, end_index)
     else:
         print(f"❌ Unknown command: {command}")
         sys.exit(1)

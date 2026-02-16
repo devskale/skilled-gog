@@ -30,3 +30,4 @@ dist/
 
 # OS/editor
 .DS_Store
+g*.json

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Direct Google Docs Editor - Edit Google Docs programmatically using API
 No intermediate formats needed - works directly with Google Docs structure
@@ -6,37 +7,59 @@ No intermediate formats needed - works directly with Google Docs structure
 
 import os
 import sys
+
+# Fix Windows console encoding
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-SCOPES = ['https://www.googleapis.com/auth/documents']
+SCOPES = [
+    'https://www.googleapis.com/auth/documents',
+    'https://www.googleapis.com/auth/drive'
+]
 TOKEN_FILE = 'token.json'
 CREDENTIALS_FILE = 'client_secrets.json'
+
+def find_credentials_file():
+    """Find client_secrets.json in multiple locations"""
+    search_paths = [
+        CREDENTIALS_FILE,  # Current directory
+        os.path.join('.agents/skills/google-workspace', CREDENTIALS_FILE),
+        os.path.join(os.path.dirname(__file__), '.agents/skills/google-workspace', CREDENTIALS_FILE),
+    ]
+    for path in search_paths:
+        if os.path.exists(path):
+            return path
+    return None
 
 def get_credentials():
     """Get OAuth credentials for Google Docs API"""
     creds = None
-    
+
     if os.path.exists(TOKEN_FILE):
         creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
-    
+
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            if not os.path.exists(CREDENTIALS_FILE):
-                print("❌ client_secrets.json not found!")
+            creds_file = find_credentials_file()
+            if not creds_file:
+                print("X client_secrets.json not found!")
                 return None
-            
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
+
+            flow = InstalledAppFlow.from_client_secrets_file(creds_file, SCOPES)
             creds = flow.run_local_server(port=0)
-        
-        with open(TOKEN_FILE, 'w') as token:
+
+        with open(TOKEN_FILE, 'w', encoding='utf-8') as token:
             token.write(creds.to_json())
-    
+
     return creds
 
 def get_document(doc_id):
@@ -51,7 +74,7 @@ def get_document(doc_id):
         
         return document
     except HttpError as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERR] Error: {e}")
         return None
 
 def print_document_structure(doc):
@@ -123,10 +146,10 @@ def append_text(doc_id, text):
             body={'requests': requests}
         ).execute()
         
-        print(f"✓ Appended text to document")
+        print(f"[OK] Appended text to document")
         return True
     except HttpError as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERR] Error: {e}")
         return False
 
 def insert_after_text(doc_id, after_text, new_text):
@@ -143,7 +166,7 @@ def insert_after_text(doc_id, after_text, new_text):
         index = find_text_index(doc, after_text)
         
         if index is None:
-            print(f"❌ Text '{after_text}' not found")
+            print(f"[ERR] Text '{after_text}' not found")
             return False
         
         # Calculate insert position (after the text)
@@ -163,10 +186,10 @@ def insert_after_text(doc_id, after_text, new_text):
             body={'requests': requests}
         ).execute()
         
-        print(f"✓ Inserted text after '{after_text}'")
+        print(f"[OK] Inserted text after '{after_text}'")
         return True
     except HttpError as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERR] Error: {e}")
         return False
 
 def replace_text(doc_id, old_text, new_text):
@@ -192,10 +215,10 @@ def replace_text(doc_id, old_text, new_text):
             body={'requests': requests}
         ).execute()
         
-        print(f"✓ Replaced '{old_text}' with '{new_text}'")
+        print(f"[OK] Replaced '{old_text}' with '{new_text}'")
         return True
     except HttpError as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERR] Error: {e}")
         return False
 
 def add_paragraph(doc_id, text):
@@ -225,10 +248,10 @@ def add_paragraph(doc_id, text):
             body={'requests': requests}
         ).execute()
         
-        print(f"✓ Added paragraph: {text[:50]}...")
+        print(f"[OK] Added paragraph: {text[:50]}...")
         return True
     except HttpError as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERR] Error: {e}")
         return False
 
 def make_bold(doc_id, start_text, end_text=None):
@@ -237,21 +260,21 @@ def make_bold(doc_id, start_text, end_text=None):
         creds = get_credentials()
         if not creds:
             return False
-        
+
         service = build('docs', 'v1', credentials=creds)
-        
+
         doc = service.documents().get(documentId=doc_id).execute()
         start_index = find_text_index(doc, start_text)
-        
+
         if start_index is None:
-            print(f"❌ Text '{start_text}' not found")
+            print(f"[ERR] Text '{start_text}' not found")
             return False
-        
+
         if end_text:
             end_index = find_text_index(doc, end_text) + len(end_text)
         else:
             end_index = start_index + len(start_text)
-        
+
         requests = [
             {
                 'updateTextStyle': {
@@ -264,17 +287,51 @@ def make_bold(doc_id, start_text, end_text=None):
                 }
             }
         ]
-        
+
         result = service.documents().batchUpdate(
             documentId=doc_id,
             body={'requests': requests}
         ).execute()
-        
-        print(f"✓ Made text bold")
+
+        print(f"[OK] Made text bold")
         return True
     except HttpError as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERR] Error: {e}")
         return False
+
+
+def copy_document(doc_id, new_name=None):
+    """Copy a document (for WORK versions) using Drive API"""
+    try:
+        creds = get_credentials()
+        if not creds:
+            return None
+
+        # Use Drive API to copy
+        drive_service = build('drive', 'v3', credentials=creds)
+
+        # Get original document name if no new name provided
+        if not new_name:
+            original = drive_service.files().get(fileId=doc_id, fields='name').execute()
+            new_name = f"{original['name']} - WORK-Kopie"
+
+        # Copy the document
+        copy_metadata = {'name': new_name}
+        copied_file = drive_service.files().copy(
+            fileId=doc_id,
+            body=copy_metadata
+        ).execute()
+
+        new_id = copied_file['id']
+        print(f"[OK] Document copied successfully")
+        print(f"  New name: {new_name}")
+        print(f"  New ID: {new_id}")
+        print(f"  URL: https://docs.google.com/document/d/{new_id}/edit")
+
+        return new_id
+    except HttpError as e:
+        print(f"[ERR] Error: {e}")
+        return None
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
@@ -286,25 +343,26 @@ if __name__ == '__main__':
         print("  paragraph <doc_id> <text>       - Add new paragraph")
         print("  bold <doc_id> <text>           - Make text bold")
         print("  structure <doc_id>              - Show document structure")
+        print("  copy <doc_id> [name]            - Copy document (WORK-Kopie)")
         print("\nYour doc ID: 1kJG9gFMy4M2iHfdxOhQ_KfNh1oy1P4aOdsDB-9626eg")
         sys.exit(1)
-    
+
     command = sys.argv[1]
     doc_id = sys.argv[2]
-    
+
     if command == 'append':
         text = sys.argv[3] if len(sys.argv) > 3 else ''
         append_text(doc_id, text)
     elif command == 'insert':
         if len(sys.argv) < 5:
-            print("❌ Error: insert command requires after_text and new_text")
+            print("[ERR] Error: insert command requires after_text and new_text")
             sys.exit(1)
         after_text = sys.argv[3]
         new_text = sys.argv[4]
         insert_after_text(doc_id, after_text, new_text)
     elif command == 'replace':
         if len(sys.argv) < 5:
-            print("❌ Error: replace command requires old_text and new_text")
+            print("[ERR] Error: replace command requires old_text and new_text")
             sys.exit(1)
         old_text = sys.argv[3]
         new_text = sys.argv[4]
@@ -319,6 +377,9 @@ if __name__ == '__main__':
         doc = get_document(doc_id)
         if doc:
             print_document_structure(doc)
+    elif command == 'copy':
+        new_name = sys.argv[3] if len(sys.argv) > 3 else None
+        copy_document(doc_id, new_name)
     else:
-        print(f"❌ Unknown command: {command}")
+        print(f"[ERR] Unknown command: {command}")
         sys.exit(1)

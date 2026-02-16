@@ -50,6 +50,7 @@ uv run gworkspace docs insert "anchor" "new text"
 uv run gworkspace docs replace "old" "new"
 uv run gworkspace docs paragraph "Heading"
 uv run gworkspace docs bold "Important"
+uv run gworkspace docs copy [name]              # Copy document (WORK-Kopie)
 
 # Sheets
 uv run gworkspace sheets read
@@ -70,6 +71,7 @@ uv run gworkspace gmail body <message_id>
 ```bash
 ./gdocs recent 10
 ./gdocs structure
+./gdocs copy "New Name"      # Copy document (default: "- WORK-Kopie")
 ./gsheets read
 ./gmail list
 ```
@@ -84,6 +86,22 @@ Use custom sheet id with wrapper:
 
 - Default document id: `1kJG9gFMy4M2iHfdxOhQ_KfNh1oy1P4aOdsDB-9626eg`
 - Default sheet id: `1MYNuzKqGEQszGO5iegXMWBzis7zdTSdvg4F3-kFWm-Q`
+
+## Copy Document
+
+Create a WORK-copy of a document:
+
+```bash
+# Copy with default name (original + " - WORK-Kopie")
+./gdocs copy <doc_id>
+
+# Copy with custom name
+./gdocs copy <doc_id> "My Custom Name"
+
+# Returns new document ID and URL
+```
+
+Requires Drive API scope (added to SCOPES).
 
 ## Troubleshooting
 
