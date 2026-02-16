@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 from email.message import EmailMessage
+from pathlib import Path
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -12,7 +13,15 @@ SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.compose",
 ]
-AI_FOOTER = "gesendet von KI, iA"
+DEFAULT_FOOTER = "gesendet von KI, iA"
+
+
+def get_ai_footer() -> str:
+    """Read AI footer from email_footer.md, fall back to default."""
+    footer_file = Path(__file__).parent.parent / "email_footer.md"
+    if footer_file.exists():
+        return footer_file.read_text().strip()
+    return DEFAULT_FOOTER
 
 
 def _service():
@@ -50,9 +59,10 @@ def build_raw_message(to: str, subject: str, body: str, cc: str | None = None, b
     if bcc:
         msg["Bcc"] = bcc
 
+    ai_footer = get_ai_footer()
     content = body.rstrip()
-    if AI_FOOTER not in content:
-        content = f"{content}\n\n{AI_FOOTER}" if content else AI_FOOTER
+    if ai_footer and ai_footer not in content:
+        content = f"{content}\n\n{ai_footer}" if content else ai_footer
     msg.set_content(content)
     return base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
 

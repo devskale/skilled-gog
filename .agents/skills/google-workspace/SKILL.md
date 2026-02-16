@@ -177,6 +177,7 @@ gworkspace docs recent 1
 │   └── gmail.py
 ├── client_secrets.json       # Your OAuth credentials
 ├── token.json                # Auto-generated token
+├── email_footer.md           # Customizable AI email footer
 └── install.sh                # Install script
 ```
 
@@ -184,5 +185,6 @@ gworkspace docs recent 1
 
 - `token.json` and `client_secrets.json` are local secret files.
 - The project uses `uv`; avoid `pip`/`python` direct workflows.
-- AI-created emails (draft/send) always append footer: `gesendet von KI, iA`.
+- AI-created emails (draft/send) always append footer from `email_footer.md`.
+- Edit `email_footer.md` to customize the footer (default: `gesendet von KI, iA`).
 - Sending policy: use `send` only after explicit user approval; command requires `--approve-send`.
