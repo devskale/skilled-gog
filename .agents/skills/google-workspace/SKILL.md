@@ -12,7 +12,7 @@ This skill uses the `google_workspace_tools` Python package for Google Docs, She
 ### Quick Install
 
 ```bash
-curl -fsSL https://gworkspace.skale.dev/install.sh | bash
+curl -fsSL https://skale.dev/skilled-google/install.sh | bash
 ```
 
 Or directly from GitHub:

@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Google Workspace Tools Installer
-# Usage: curl -fsSL https://gworkspace.skale.dev/install.sh | bash
+# Usage: curl -fsSL https://skale.dev/skilled-google/install.sh | bash
 #
 # Installs the gworkspace CLI for Google Docs, Sheets, and Gmail operations.
 #

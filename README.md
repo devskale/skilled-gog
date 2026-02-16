@@ -5,7 +5,7 @@ A Python CLI for Google Workspace automation (Docs, Sheets, Gmail) with unified 
 ## Quick Install
 
 ```bash
-curl -fsSL https://gworkspace.skale.dev/install.sh | bash
+curl -fsSL https://skale.dev/skilled-google/install.sh | bash
 ```
 
 Or directly from GitHub:
