@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 .pytest_cache/
 .mypy_cache/
+tests/__pycache__/
 
 # Virtual environments
 .venv/
@@ -11,16 +12,18 @@ google_docs_env/
 .agents/skills/**/.venv/
 
 # OAuth secrets and tokens
-**/client_secrets.json
-**/client_secret_*.json
-**/token.json
+client_secrets.json
+client_secret_*.json
+token.json
 .env
 .env.*
 
-# Generated artifacts
-doc_*.json
+# Generated/output files
+*.txt
+!requirements.txt
 *.docx
 *.pdf
+doc_*.json
 unpacked/
 
 # Packaging/build
@@ -30,4 +33,3 @@ dist/
 
 # OS/editor
 .DS_Store
-g*.json
