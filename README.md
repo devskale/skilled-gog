@@ -106,3 +106,32 @@ uv run pytest
 ## License
 
 MIT
+
+## Skill Installation (for AI Agents)
+
+This project includes a skill for AI agents (pi, Claude, etc.) to use Google Workspace tools.
+
+### Install Skill
+
+Create a symlink from your project's skills folder to the pi skills directory:
+
+```bash
+# In your project's .agents/skills directory:
+ln -s ~/.pi/agent/skills/google-workspace .agents/skills/google-workspace
+```
+
+Or clone the skill directly:
+
+```bash
+mkdir -p ~/.pi/agent/skills/google-workspace
+curl -fsSL https://raw.githubusercontent.com/devskale/skilled-gog/main/.agents/skills/google-workspace/SKILL.md \
+  -o ~/.pi/agent/skills/google-workspace/SKILL.md
+```
+
+### Update Skill
+
+```bash
+cd ~/.gworkspace && git pull && uv sync
+```
+
+The skill will use the tools installed in `~/.gworkspace`.

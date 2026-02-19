@@ -2,34 +2,55 @@
 __pycache__/
 *.py[cod]
 *.pyo
+*.pyd
 .pytest_cache/
 .mypy_cache/
-tests/__pycache__/
+.ruff_cache/
 
 # Virtual environments
 .venv/
-google_docs_env/
-.agents/skills/**/.venv/
+*_env/
+venv/
+env/
 
-# OAuth secrets and tokens
+# OAuth secrets and tokens (NEVER COMMIT)
 client_secrets.json
 client_secret_*.json
 token.json
+credentials.json
 .env
 .env.*
 
 # Generated/output files
-*.txt
-!requirements.txt
 *.docx
 *.pdf
+*.xlsx
 doc_*.json
 unpacked/
+
+# Email summaries (local only)
+emails/
 
 # Packaging/build
 build/
 dist/
 *.egg-info/
+*.egg
 
-# OS/editor
+# IDE/Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Local tool configs
+.pi/
+.docli
+.gogcli
+
+# Agent skills local venvs
+.agents/skills/**/.venv/

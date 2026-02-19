@@ -49,7 +49,15 @@ def get_message(message_id: str, fmt: str = "full") -> dict:
     return _service().users().messages().get(userId="me", id=message_id, format=fmt).execute()
 
 
-def build_raw_message(to: str, subject: str, body: str, cc: str | None = None, bcc: str | None = None) -> str:
+def build_raw_message(
+    to: str,
+    subject: str,
+    body: str,
+    cc: str | None = None,
+    bcc: str | None = None,
+    in_reply_to: str | None = None,
+    references: str | None = None,
+) -> str:
     """Build a raw email message with AI footer."""
     msg = EmailMessage()
     msg["To"] = to
@@ -58,6 +66,10 @@ def build_raw_message(to: str, subject: str, body: str, cc: str | None = None, b
         msg["Cc"] = cc
     if bcc:
         msg["Bcc"] = bcc
+    if in_reply_to:
+        msg["In-Reply-To"] = in_reply_to
+    if references:
+        msg["References"] = references
 
     ai_footer = get_ai_footer()
     content = body.rstrip()
@@ -67,9 +79,17 @@ def build_raw_message(to: str, subject: str, body: str, cc: str | None = None, b
     return base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
 
 
-def create_draft(to: str, subject: str, body: str, cc: str | None = None, bcc: str | None = None) -> dict:
+def create_draft(
+    to: str,
+    subject: str,
+    body: str,
+    cc: str | None = None,
+    bcc: str | None = None,
+    in_reply_to: str | None = None,
+    references: str | None = None,
+) -> dict:
     """Create an email draft."""
-    raw_message = build_raw_message(to, subject, body, cc, bcc)
+    raw_message = build_raw_message(to, subject, body, cc, bcc, in_reply_to, references)
     return (
         _service()
         .users()
@@ -111,6 +131,20 @@ def get_message_body(message: dict) -> str:
                 return nested_text
 
     return "[Body could not be extracted]"
+
+
+def get_threading_headers(message_id: str) -> dict:
+    """Get Message-ID and References headers for threading a reply."""
+    msg = get_message(message_id, fmt="full")
+    headers = msg.get("payload", {}).get("headers", [])
+    h = {entry.get("name", ""): entry.get("value", "") for entry in headers}
+    
+    result = {
+        "message_id": h.get("Message-ID", ""),
+        "references": h.get("References", ""),
+        "subject": h.get("Subject", ""),
+    }
+    return result
 
 
 def print_header(message: dict) -> None:
