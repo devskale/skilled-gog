@@ -11,62 +11,61 @@ set -euo pipefail
 GITHUB_REPO="https://github.com/devskale/skilled-gog"
 TOOLS_DIR="$HOME/.gworkspace"
 
-# Default: global install for pi
-AGENT="${AGENT:-pi}"
-SCOPE="${SCOPE:-global}"
-
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[1;34m'
 NC='\033[0m'
 
 info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+prompt() { echo -e -n "${BLUE}[?]:${NC} $1"; }
 
-usage() {
-    echo "Usage: curl -fsSL https://skale.dev/install-gog-skill.sh | bash -s -- [options]"
-    echo ""
-    echo "Options:"
-    echo "  --agent <pi|opencode>    AI agent (default: pi)"
-    echo "  --scope <global|local>   Global (~/.pi) or local (./.agents) (default: global)"
-    echo "  --tools                  Also install gworkspace tools (~/.gworkspace)"
-    echo "  --update                 Update existing installation"
-    echo "  -h, --help               Show this help"
-    echo ""
-    echo "Examples:"
-    echo "  # Global install for pi"
-    echo "  curl -fsSL https://skale.dev/install-gog-skill.sh | bash"
-    echo ""
-    echo "  # Local install for current project"
-    echo "  curl -fsSL https://skale.dev/install-gog-skill.sh | bash -s -- --scope local"
-    echo ""
-    echo "  # Install for opencode"
-    echo "  curl -fsSL https://skale.dev/install-gog-skill.sh | bash -s -- --agent opencode"
-    echo ""
-    echo "  # Install everything (skill + tools)"
-    echo "  curl -fsSL https://skale.dev/install-gog-skill.sh | bash -s -- --tools"
-    exit 0
+check_uv() {
+    if command -v uv &>/dev/null; then
+        return 0
+    fi
+    if [ -x "$HOME/.local/bin/uv" ]; then
+        export PATH="$HOME/.local/bin:$PATH"
+        return 0
+    fi
+    return 1
+}
+
+install_uv() {
+    info "Installing uv..."
+    if command -v curl &>/dev/null; then
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+    elif command -v wget &>/dev/null; then
+        wget -qO- https://astral.sh/uv/install.sh | sh
+    else
+        error "Neither curl nor wget found. Please install one first."
+    fi
+    export PATH="$HOME/.local/bin:$PATH"
 }
 
 get_skill_dir() {
-    case "$AGENT" in
+    local agent="$1"
+    local scope="$2"
+
+    case "$agent" in
         pi)
-            if [ "$SCOPE" = "global" ]; then
+            if [ "$scope" = "global" ]; then
                 echo "$HOME/.pi/agent/skills/google-workspace"
             else
                 echo "$(pwd)/.agents/skills/google-workspace"
             fi
             ;;
         opencode)
-            if [ "$SCOPE" = "global" ]; then
+            if [ "$scope" = "global" ]; then
                 echo "$HOME/.opencode/skills/google-workspace"
             else
                 echo "$(pwd)/.opencode/skills/google-workspace"
             fi
             ;;
         *)
-            error "Unknown agent: $AGENT"
+            error "Unknown agent: $agent"
             ;;
     esac
 }
@@ -74,11 +73,9 @@ get_skill_dir() {
 install_skill() {
     local skill_dir="$1"
 
-    info "Installing google-workspace skill to: $skill_dir"
-
+    info "Installing skill to: $skill_dir"
     mkdir -p "$skill_dir"
 
-    # Download files from GitHub
     curl -fsSL "$GITHUB_REPO/raw/main/.agents/skills/google-workspace/SKILL.md" \
         -o "$skill_dir/SKILL.md"
 
@@ -92,97 +89,191 @@ install_skill() {
 }
 
 install_tools() {
-    info "Installing Google Workspace tools to: $TOOLS_DIR"
+    info "Installing tools to: $TOOLS_DIR"
 
     if [ -d "$TOOLS_DIR/.git" ]; then
-        info "Tools already installed. Updating..."
+        info "Updating existing installation..."
         cd "$TOOLS_DIR"
         git pull
         uv sync --quiet
-        info "Tools updated."
     else
         rm -rf "$TOOLS_DIR"
         git clone --depth 1 "$GITHUB_REPO.git" "$TOOLS_DIR"
         cd "$TOOLS_DIR"
         uv sync --quiet
-        info "Tools installed."
     fi
+    info "Tools installed successfully"
 }
 
 update_installation() {
     local skill_dir="$1"
 
-    info "Updating installation..."
+    info "Updating..."
 
     # Update skill
-    if [ -d "$skill_dir" ]; then
+    if [ -f "$skill_dir/SKILL.md" ]; then
         curl -fsSL "$GITHUB_REPO/raw/main/.agents/skills/google-workspace/SKILL.md" \
             -o "$skill_dir/SKILL.md"
-        info "Skill updated."
+        info "Skill updated"
+    else
+        warn "Skill not found at $skill_dir"
     fi
 
     # Update tools
     if [ -d "$TOOLS_DIR/.git" ]; then
         cd "$TOOLS_DIR"
         git pull && uv sync --quiet
-        info "Tools updated."
+        info "Tools updated"
+    else
+        warn "Tools not found at $TOOLS_DIR"
     fi
 }
 
-main() {
-    local install_tools_flag=false
-    local update_flag=false
+select_option() {
+    local prompt_text="$1"
+    shift
+    local options=("$@")
+    local default="${options[0]}"
 
-    # Parse arguments
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --agent)
-                AGENT="$2"
-                shift 2
-                ;;
-            --scope)
-                SCOPE="$2"
-                shift 2
-                ;;
-            --tools)
-                install_tools_flag=true
-                shift
-                ;;
-            --update)
-                update_flag=true
-                shift
-                ;;
-            -h|--help)
-                usage
-                ;;
-            *)
-                error "Unknown option: $1"
-                ;;
-        esac
+    # If set via environment variable, use it
+    case "$prompt_text" in
+        *"Agent"*)
+            if [ -n "${AGENT:-}" ]; then
+                echo "$AGENT"
+                return
+            fi
+            ;;
+        *"Scope"*)
+            if [ -n "${SCOPE:-}" ]; then
+                echo "$SCOPE"
+                return
+            fi
+            ;;
+        *"tools"*)
+            if [ -n "${TOOLS:-}" ]; then
+                echo "$TOOLS"
+                return
+            fi
+            ;;
+    esac
+
+    echo ""
+    echo "$prompt_text"
+    local i=1
+    for opt in "${options[@]}"; do
+        echo "  $i) $opt"
+        ((i++))
     done
+    echo ""
 
+    prompt "Select [1-${#options[@]}] (default: $default): "
+    read -r choice
+
+    if [ -z "$choice" ]; then
+        echo "$default"
+        return
+    fi
+
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#options[@]} ]; then
+        echo "${options[$((choice-1))]}"
+    else
+        echo "$default"
+    fi
+}
+
+select_yesno() {
+    local prompt_text="$1"
+    local default="${2:-n}"
+
+    prompt "$prompt_text [y/N]: "
+    read -r choice
+
+    if [ -z "$choice" ]; then
+        echo "$default"
+        return
+    fi
+
+    case "$choice" in
+        [Yy]*) echo "y" ;;
+        *) echo "n" ;;
+    esac
+}
+
+main() {
     echo ""
     echo "╔════════════════════════════════════════════╗"
-    echo "║   Google Workspace Skill Installer         ║"
+    echo "║     Google Workspace Skill Installer       ║"
     echo "╚════════════════════════════════════════════╝"
     echo ""
-    echo "Agent: $AGENT"
-    echo "Scope: $SCOPE"
-    echo ""
+
+    # Check for existing installation
+    local existing_skill=""
+    for dir in "$HOME/.pi/agent/skills/google-workspace" \
+               "$HOME/.opencode/skills/google-workspace" \
+               "$(pwd)/.agents/skills/google-workspace"; do
+        if [ -f "$dir/SKILL.md" ]; then
+            existing_skill="$dir"
+            break
+        fi
+    done
+
+    # Ask to update if exists
+    if [ -n "$existing_skill" ] || [ -d "$TOOLS_DIR/.git" ]; then
+        echo "Found existing installation:"
+        [ -n "$existing_skill" ] && echo "  - Skill: $existing_skill"
+        [ -d "$TOOLS_DIR/.git" ] && echo "  - Tools: $TOOLS_DIR"
+        echo ""
+
+        local update_choice
+        update_choice=$(select_yesno "Update existing installation?" "y")
+        if [ "$update_choice" = "y" ]; then
+            if [ -z "$existing_skill" ]; then
+                existing_skill=$(get_skill_dir "pi" "global")
+            fi
+            update_installation "$existing_skill"
+            echo ""
+            echo "Update complete!"
+            exit 0
+        fi
+        echo ""
+    fi
+
+    # Interactive prompts
+    local agent scope install_tools_choice
+
+    agent=$(select_option "Which AI agent?" "pi" "opencode")
+    scope=$(select_option "Install scope?" "global" "local")
+    install_tools_choice=$(select_yesno "Also install gworkspace tools (~/.gworkspace)?" "y")
 
     local skill_dir
-    skill_dir=$(get_skill_dir)
+    skill_dir=$(get_skill_dir "$agent" "$scope")
 
-    if [ "$update_flag" = true ]; then
-        update_installation "$skill_dir"
+    echo ""
+    echo "Summary:"
+    echo "  Agent: $agent"
+    echo "  Scope: $scope"
+    echo "  Skill: $skill_dir"
+    [ "$install_tools_choice" = "y" ] && echo "  Tools: $TOOLS_DIR"
+    echo ""
+
+    local confirm
+    confirm=$(select_yesno "Proceed with installation?" "y")
+    if [ "$confirm" != "y" ]; then
+        echo "Aborted."
         exit 0
     fi
 
-    # Install skill
+    # Check/install uv if tools requested
+    if [ "$install_tools_choice" = "y" ]; then
+        if ! check_uv; then
+            install_uv
+        fi
+    fi
+
+    # Install
     install_skill "$skill_dir"
 
-    # Install tools if requested
-    if [ "$install_tools_flag" = true ]; then
+    if [ "$install_tools_choice" = "y" ]; then
         install_tools
     fi
 
@@ -192,18 +283,14 @@ main() {
     echo "╚════════════════════════════════════════════╝"
     echo ""
     echo "Skill: $skill_dir"
-    echo "Tools: $TOOLS_DIR"
+    [ "$install_tools_choice" = "y" ] && echo "Tools: $TOOLS_DIR"
     echo ""
     echo "Next steps:"
-    echo "  1. Add OAuth credentials:"
-    echo "     cp $skill_dir/client_secrets.json.template $TOOLS_DIR/client_secrets.json"
-    echo "     # Edit with your Google Cloud OAuth credentials"
+    echo "  1. Get OAuth credentials from Google Cloud Console"
+    echo "  2. Save as: $TOOLS_DIR/client_secrets.json"
+    echo "  3. Test: cd $TOOLS_DIR && uv run gworkspace docs recent 5"
     echo ""
-    echo "  2. Test:"
-    echo "     cd $TOOLS_DIR && uv run gworkspace docs recent 5"
-    echo ""
-    echo "Update:"
-    echo "  curl -fsSL https://skale.dev/install-gog-skill.sh | bash -s -- --update"
+    echo "To update later, run this installer again."
     echo ""
 }
 

@@ -151,7 +151,7 @@ main() {
     echo "  3. Authenticate when prompted"
     echo ""
     echo "For credentials setup, see:"
-    echo "  https://console.cloud.google.com/apis/credentials?project=667256544145"
+    echo "  https://console.cloud.google.com/apis/credentials"
     echo ""
 }
 

@@ -14,7 +14,7 @@ Install paths:
 
 ## Credentials Setup
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials?project=667256544145)
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
 2. Create OAuth 2.0 credentials (Desktop application)
 3. Download JSON and save as `~/.gworkspace/client_secrets.json`
 4. Run any command to authenticate
