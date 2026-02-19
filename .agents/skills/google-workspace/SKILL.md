@@ -9,40 +9,39 @@ This skill provides access to Google Docs, Sheets, and Gmail operations.
 
 ## Installation
 
-### Install from GitHub
+### Quick Install (pi, global)
 
 ```bash
-curl -fsSL https://skale.dev/skilled-google/install.sh | bash
+curl -fsSL https://skale.dev/install-gog-skill.sh | bash
 ```
 
-Or manually:
+### Install Options
 
 ```bash
-git clone https://github.com/devskale/skilled-gog.git ~/.gworkspace
-cd ~/.gworkspace && uv sync
+# Local install (in current project)
+curl -fsSL https://skale.dev/install-gog-skill.sh | bash -s -- --scope local
+
+# Install for opencode
+curl -fsSL https://skale.dev/install-gog-skill.sh | bash -s -- --agent opencode
+
+# Install skill + tools together
+curl -fsSL https://skale.dev/install-gog-skill.sh | bash -s -- --tools
 ```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--agent <pi\|opencode>` | AI agent (default: pi) |
+| `--scope <global\|local>` | Global or project-local install (default: global) |
+| `--tools` | Also install gworkspace tools (~/.gworkspace) |
+| `--update` | Update existing installation |
 
 ### Update
 
-Pull latest changes from GitHub:
-
 ```bash
-cd ~/.gworkspace && git pull && uv sync
+curl -fsSL https://skale.dev/install-gog-skill.sh | bash -s -- --update
 ```
-
-### Verify Installation
-
-```bash
-ls ~/.gworkspace/google_workspace_tools/
-ls ~/.gworkspace/client_secrets.json
-```
-
-### Credentials Setup
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials?project=667256544145)
-2. Create OAuth 2.0 credentials (Desktop application)
-3. Download JSON and save as `~/.gworkspace/client_secrets.json`
-4. Run any command to authenticate
 
 ## Commands
 
@@ -78,6 +77,13 @@ cd ~/.gworkspace && uv run gworkspace gmail draft "to@example.com" "Subject" "Bo
 cd ~/.gworkspace && uv run gworkspace gmail send --approve-send "to@example.com" "Subject" "Body"
 ```
 
+## Credentials Setup
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials?project=667256544145)
+2. Create OAuth 2.0 credentials (Desktop application)
+3. Download JSON and save as `~/.gworkspace/client_secrets.json`
+4. Run any command to authenticate
+
 ## Authentication Issues
 
 If you see `insufficient authentication scopes` or `invalid_scope`:
@@ -98,31 +104,8 @@ Customize:
 echo "Your custom footer" > ~/.gworkspace/email_footer.md
 ```
 
-## Project Structure
-
-```
-~/.gworkspace/
-├── google_workspace_tools/   # Python package
-│   ├── auth.py
-│   ├── cli.py
-│   ├── docs.py
-│   ├── sheets.py
-│   └── gmail.py
-├── client_secrets.json       # OAuth credentials
-├── token.json                # Auto-generated token
-├── email_footer.md           # Email footer
-└── install.sh
-```
-
 ## API Links
 
 - **Docs:** https://console.developers.google.com/apis/api/docs.googleapis.com/overview?project=667256544145
 - **Sheets:** https://console.developers.google.com/apis/api/sheets.googleapis.com/overview?project=667256544145
 - **Gmail:** https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=667256544145
-
-## Notes
-
-- Uses `uv` for dependency management
-- One shared `token.json` for all services
-- Different services require different OAuth scopes - re-auth if switching
-- Sending requires explicit `--approve-send` flag
